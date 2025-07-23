@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kube-esg-app
+  namespace: kube-esg
+  labels:
+    app: kube-esg-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kube-esg-app
+  template:
+    metadata:
+      labels:
+        app: kube-esg-app
+    spec:
+      serviceAccountName: kube-esg-app
+      containers:
+      - name: app
+        image: kube-esg-app:latest
+        imagePullPolicy: Never  # For kind cluster with local images
+        ports:
+        - containerPort: 3000
+          name: http
+        envFrom:
+        - configMapRef:
+            name: app-config
+        - secretRef:
+            name: app-secrets
+        env:
+        - name: NODE_ENV
+          value: "production"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kube-esg-app
+  namespace: kube-esg
+  labels:
+    app: kube-esg-app
+spec:
+  type: NodePort
+  ports:
+  - port: 3000
+    targetPort: 3000
+    nodePort: 30000
+    name: http
+  selector:
+    app: kube-esg-app

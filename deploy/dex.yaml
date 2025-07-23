@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dex
+  namespace: kube-esg
+  labels:
+    app: dex
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dex
+  template:
+    metadata:
+      labels:
+        app: dex
+    spec:
+      containers:
+      - name: dex
+        image: dexidp/dex:v2.43.1-alpine
+        ports:
+        - containerPort: 5556
+          name: http
+        volumeMounts:
+        - name: config
+          mountPath: /etc/dex
+        - name: storage
+          mountPath: /var/dex
+        command:
+        - dex
+        - serve
+        - /etc/dex/config.yaml
+      volumes:
+      - name: config
+        configMap:
+          name: dex-config
+      - name: storage
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dex
+  namespace: kube-esg
+  labels:
+    app: dex
+spec:
+  ports:
+  - port: 5556
+    targetPort: 5556
+    name: http
+  selector:
+    app: dex

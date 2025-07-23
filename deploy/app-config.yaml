@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: kube-esg
+data:
+  OIDC_ENABLED: "true"
+  OIDC_CLIENT_ID: "example-app"
+  OIDC_SCOPE: "openid profile email"
+  OIDC_APP_URL: "http://localhost:3000"
+  NEXTAUTH_URL: "http://localhost:3000"
+  OIDC_ISSUER: "http://7f000001.nip.io:5556/dex"
+  OIDC_AUTHORIZATION_ENDPOINT: "http://7f000001.nip.io:5556/dex/auth"
+  OIDC_TOKEN_ENDPOINT: "http://dex.kube-esg.svc.cluster.local:5556/dex/token"
+  OIDC_JWKS_URI: "http://dex.kube-esg.svc.cluster.local:5556/dex/keys"
+  OIDC_USERINFO_ENDPOINT: "http://dex.kube-esg.svc.cluster.local:5556/dex/userinfo"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: app-secrets
+  namespace: kube-esg
+type: Opaque
+data:
+  OIDC_CLIENT_SECRET: WlhoaGJYQnNaUzFoY0hBdGMyVmpjbVYw  # base64 encoded: ZXhhbXBsZS1hcHAtc2VjcmV0
+  NEXTAUTH_SECRET: eW05MWNpMXpaV055WlhRdGEyVjVMV2hsY21V  # base64 encoded: your-secret-key-here

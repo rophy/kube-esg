@@ -7,14 +7,19 @@ const authOptions: NextAuthOptions = {
       id: 'dex',
       name: 'Dex',
       type: 'oauth',
-      wellKnown: `${process.env.OIDC_ISSUER}/.well-known/openid-configuration`,
+      issuer: process.env.OIDC_ISSUER,
       clientId: process.env.OIDC_CLIENT_ID,
       clientSecret: process.env.OIDC_CLIENT_SECRET,
       authorization: {
+        url: process.env.OIDC_AUTHORIZATION_ENDPOINT,
         params: {
           scope: process.env.OIDC_SCOPE || 'openid profile email',
+          response_type: 'code',
         },
       },
+      token: process.env.OIDC_TOKEN_ENDPOINT,
+      userinfo: process.env.OIDC_USERINFO_ENDPOINT,
+      jwks_endpoint: process.env.OIDC_JWKS_URI,
       profile(profile) {
         return {
           id: profile.sub,

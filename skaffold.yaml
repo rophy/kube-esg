@@ -1,0 +1,51 @@
+apiVersion: skaffold/v4beta11
+kind: Config
+metadata:
+  name: kube-esg
+build:
+  artifacts:
+  - image: kube-esg-app
+    context: .
+    docker:
+      dockerfile: Dockerfile
+  local:
+    push: false
+manifests:
+  rawYaml:
+  - deploy/namespace.yaml
+  - deploy/rbac.yaml
+  - deploy/dex-config.yaml
+  - deploy/dex.yaml
+  - deploy/app-config.yaml
+  - deploy/app.yaml
+deploy:
+  kubectl: {}
+portForward:
+- resourceType: service
+  resourceName: kube-esg-app
+  namespace: kube-esg
+  port: 3000
+  localPort: 3000
+profiles:
+- name: dev
+  build:
+    artifacts:
+    - image: kube-esg-app
+      context: .
+      docker:
+        dockerfile: Dockerfile
+      sync:
+        manual:
+        - src: "src/**/*.ts"
+          dest: /app/src
+        - src: "src/**/*.tsx"
+          dest: /app/src
+  manifests:
+    rawYaml:
+    - deploy/namespace.yaml
+    - deploy/rbac.yaml
+    - deploy/dex-config.yaml
+    - deploy/dex.yaml
+    - deploy/app-config.yaml
+    - deploy/app.yaml
+
