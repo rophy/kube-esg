@@ -1,18 +1,21 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useSession } from 'next-auth/react'
 
 interface Namespace {
   name: string
-  annotationA: string
-  annotationB: string
+  shutdownBy: string
+  shutdownAt: string
   annotations: Record<string, string>
 }
 
 export default function NamespaceTable() {
+  const { data: session } = useSession()
   const [namespaces, setNamespaces] = useState<Namespace[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [extending, setExtending] = useState<string | null>(null)
 
   useEffect(() => {
     fetchNamespaces()
@@ -30,6 +33,39 @@ export default function NamespaceTable() {
       setError(err instanceof Error ? err.message : 'An error occurred')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleExtend = async (namespaceName: string) => {
+    if (!session?.user?.email) {
+      setError('Must be logged in to extend namespace')
+      return
+    }
+
+    setExtending(namespaceName)
+    try {
+      const response = await fetch(`/api/namespaces/${namespaceName}/extend`, {
+        method: 'POST',
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to extend namespace')
+      }
+
+      const data = await response.json()
+      
+      // Update the namespace in local state
+      setNamespaces(prev => prev.map(ns => 
+        ns.name === namespaceName 
+          ? { ...ns, shutdownAt: data.shutdownAt, shutdownBy: data.shutdownBy }
+          : ns
+      ))
+      
+      setError(null)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to extend namespace')
+    } finally {
+      setExtending(null)
     }
   }
 
@@ -58,10 +94,10 @@ export default function NamespaceTable() {
               Namespace Name
             </th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Annotation A
+              Shutdown At
             </th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Annotation B
+              Shutdown By
             </th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               Actions
@@ -74,18 +110,25 @@ export default function NamespaceTable() {
               <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                 {namespace.name}
               </td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                {namespace.annotationA || '-'}
+              <td className="px-6 py-4 whitespace-nowrap text-sm">
+                {namespace.shutdownAt ? (
+                  <span className="text-gray-900">{namespace.shutdownAt}</span>
+                ) : (
+                  <span className="text-gray-400 italic">
+                    {new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
+                  </span>
+                )}
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                {namespace.annotationB || '-'}
+                {namespace.shutdownBy || '-'}
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                <button className="text-blue-600 hover:text-blue-900 mr-4">
-                  Edit
-                </button>
-                <button className="text-red-600 hover:text-red-900">
-                  Delete
+                <button 
+                  onClick={() => handleExtend(namespace.name)}
+                  disabled={extending === namespace.name}
+                  className="text-blue-600 hover:text-blue-900 disabled:text-gray-400 disabled:cursor-not-allowed"
+                >
+                  {extending === namespace.name ? 'Extending...' : 'Extend'}
                 </button>
               </td>
             </tr>

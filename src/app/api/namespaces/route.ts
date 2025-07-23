@@ -12,8 +12,8 @@ export async function GET() {
     
     const namespaces = response.items.map(ns => ({
       name: ns.metadata?.name || '',
-      annotationA: ns.metadata?.annotations?.['annotation-a'] || '',
-      annotationB: ns.metadata?.annotations?.['annotation-b'] || '',
+      shutdownBy: ns.metadata?.annotations?.['kube-esg/shutdown-by'] || '',
+      shutdownAt: ns.metadata?.annotations?.['kube-esg/shutdown-at'] || '',
       annotations: ns.metadata?.annotations || {}
     }))
 
