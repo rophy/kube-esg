@@ -1,22 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import * as k8s from '@kubernetes/client-node'
+import logger from '@/lib/logger'
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ name: string }> }
 ) {
+  // Get the authenticated user session
+  const session = await getServerSession()
+  if (!session?.user?.email) {
+    return NextResponse.json(
+      { error: 'Not authenticated' },
+      { status: 401 }
+    )
+  }
+  
   try {
-    // Get the authenticated user session
-    const session = await getServerSession()
-    if (!session?.user?.email) {
-      return NextResponse.json(
-        { error: 'Not authenticated' },
-        { status: 401 }
-      )
-    }
 
     const { name: namespaceName } = await params
+
+    logger.info({
+      action: 'namespace_extend_requested',
+      namespace: namespaceName,
+      user: session.user.email,
+      userAgent: request.headers.get('user-agent'),
+      ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'
+    }, 'User requested namespace extension')
 
     // Initialize Kubernetes client
     const kc = new k8s.KubeConfig()
@@ -79,6 +89,15 @@ export async function POST(
       body: patch
     })
 
+    logger.info({
+      action: 'namespace_extend_completed',
+      namespace: namespaceName,
+      user: session.user.email,
+      previousShutdownAt: existingAnnotations['kube-esg/shutdown-at'] || 'not set',
+      newShutdownAt: newShutdownDate,
+      previousShutdownBy: existingAnnotations['kube-esg/shutdown-by'] || 'not set'
+    }, 'Namespace extension completed successfully')
+
     return NextResponse.json({
       success: true,
       shutdownAt: newShutdownDate,
@@ -86,7 +105,16 @@ export async function POST(
     })
 
   } catch (error) {
-    console.error('Error extending namespace:', error)
+    const { name: namespaceName } = await params
+    
+    logger.error({
+      action: 'namespace_extend_failed',
+      namespace: namespaceName,
+      user: session.user.email,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      errorStack: error instanceof Error ? error.stack : undefined
+    }, 'Failed to extend namespace')
+    
     return NextResponse.json(
       { error: 'Failed to extend namespace' },
       { status: 500 }
