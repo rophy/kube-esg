@@ -1,0 +1,56 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: shutdown-job
+  namespace: kube-esg
+  labels:
+    app: shutdown-job
+    component: lifecycle-manager
+spec:
+  schedule: "23 19 * * *"  # 03:23 GMT+8 (19:23 UTC) - random time between 03:00-06:00 GMT+8
+  timeZone: "UTC"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 5
+  jobTemplate:
+    metadata:
+      labels:
+        app: shutdown-job
+        component: lifecycle-manager
+    spec:
+      template:
+        metadata:
+          labels:
+            app: shutdown-job
+            component: lifecycle-manager
+        spec:
+          serviceAccountName: shutdown-job
+          restartPolicy: Never
+          containers:
+          - name: shutdown
+            image: shutdown-job:latest
+            imagePullPolicy: IfNotPresent
+            env:
+            - name: SERVICE_ACCOUNT_NAME
+              value: "shutdown-job"
+            resources:
+              requests:
+                memory: "32Mi"
+                cpu: "50m"
+              limits:
+                memory: "128Mi"
+                cpu: "200m"
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              runAsNonRoot: true
+              runAsUser: 1000
+              capabilities:
+                drop:
+                - ALL
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            fsGroup: 1000
+            seccompProfile:
+              type: RuntimeDefault
