@@ -67,7 +67,7 @@ async function shutdownDeployments(namespaceName) {
             if (!name) continue;
 
             // Skip if already shutdown
-            if (deployment.metadata?.annotations?.['kube-esg/shutdown-done']) {
+            if (deployment.metadata?.annotations?.['kube-esg/prev-shutdown-at']) {
                 console.log(`    Deployment ${name} already shutdown`);
                 continue;
             }
@@ -83,7 +83,7 @@ async function shutdownDeployments(namespaceName) {
                 },
                 {
                     op: 'add',
-                    path: '/metadata/annotations/kube-esg~1shutdown-done',
+                    path: '/metadata/annotations/kube-esg~1prev-shutdown-at',
                     value: nowTimestamp
                 },
                 {
@@ -136,7 +136,7 @@ async function shutdownStatefulSets(namespaceName) {
             if (!name) continue;
 
             // Skip if already shutdown
-            if (statefulSet.metadata?.annotations?.['kube-esg/shutdown-done']) {
+            if (statefulSet.metadata?.annotations?.['kube-esg/prev-shutdown-at']) {
                 console.log(`    StatefulSet ${name} already shutdown`);
                 continue;
             }
@@ -152,7 +152,7 @@ async function shutdownStatefulSets(namespaceName) {
                 },
                 {
                     op: 'add',
-                    path: '/metadata/annotations/kube-esg~1shutdown-done',
+                    path: '/metadata/annotations/kube-esg~1prev-shutdown-at',
                     value: nowTimestamp
                 },
                 {
@@ -204,7 +204,7 @@ async function shutdownDaemonSets(namespaceName) {
             if (!name) continue;
 
             // Skip if already shutdown
-            if (daemonSet.metadata?.annotations?.['kube-esg/shutdown-done']) {
+            if (daemonSet.metadata?.annotations?.['kube-esg/prev-shutdown-at']) {
                 console.log(`    DaemonSet ${name} already shutdown`);
                 continue;
             }
@@ -220,7 +220,7 @@ async function shutdownDaemonSets(namespaceName) {
                 },
                 {
                     op: 'add',
-                    path: '/metadata/annotations/kube-esg~1shutdown-done',
+                    path: '/metadata/annotations/kube-esg~1prev-shutdown-at',
                     value: nowTimestamp
                 },
                 {
@@ -275,7 +275,7 @@ async function shutdownCronJobs(namespaceName) {
             if (!name) continue;
 
             // Skip if already shutdown
-            if (cronJob.metadata?.annotations?.['kube-esg/shutdown-done']) {
+            if (cronJob.metadata?.annotations?.['kube-esg/prev-shutdown-at']) {
                 console.log(`    CronJob ${name} already shutdown`);
                 continue;
             }
@@ -291,7 +291,7 @@ async function shutdownCronJobs(namespaceName) {
                 },
                 {
                     op: 'add',
-                    path: '/metadata/annotations/kube-esg~1shutdown-done',
+                    path: '/metadata/annotations/kube-esg~1prev-shutdown-at',
                     value: nowTimestamp
                 },
                 {
@@ -369,9 +369,9 @@ async function processNamespaces() {
         }
 
         const annotations = namespace.metadata.annotations || {};
-        const shutdownAt = getAnnotation(annotations, 'kube-esg/shutdown-at');
-        const shutdownBy = getAnnotation(annotations, 'kube-esg/shutdown-by');
-        const shutdownDone = getAnnotation(annotations, 'kube-esg/shutdown-done');
+        const shutdownAt = getAnnotation(annotations, 'kube-esg/next-shutdown-at');
+        const shutdownBy = getAnnotation(annotations, 'kube-esg/next-shutdown-by');
+        const shutdownDone = getAnnotation(annotations, 'kube-esg/prev-shutdown-at');
 
         // Skip if already shutdown
         if (shutdownDone) {
@@ -386,12 +386,12 @@ async function processNamespaces() {
             const patch = [
                 {
                     op: 'add',
-                    path: '/metadata/annotations/kube-esg~1shutdown-at',
+                    path: '/metadata/annotations/kube-esg~1next-shutdown-at',
                     value: futureDateString
                 },
                 {
                     op: 'add',
-                    path: '/metadata/annotations/kube-esg~1shutdown-by',
+                    path: '/metadata/annotations/kube-esg~1next-shutdown-by',
                     value: `serviceaccount/${serviceAccountName}`
                 }
             ];
@@ -433,23 +433,23 @@ async function processNamespaces() {
                 const patch = [
                     {
                         op: 'add',
-                        path: '/metadata/annotations/kube-esg~1shutdown-done',
+                        path: '/metadata/annotations/kube-esg~1prev-shutdown-at',
                         value: nowTimestamp
                     }
                 ];
 
                 // Remove shutdown-at and shutdown-by annotations
-                if (getAnnotation(annotations, 'kube-esg/shutdown-at')) {
+                if (getAnnotation(annotations, 'kube-esg/next-shutdown-at')) {
                     patch.push({
                         op: 'remove',
-                        path: '/metadata/annotations/kube-esg~1shutdown-at'
+                        path: '/metadata/annotations/kube-esg~1next-shutdown-at'
                     });
                 }
 
-                if (getAnnotation(annotations, 'kube-esg/shutdown-by')) {
+                if (getAnnotation(annotations, 'kube-esg/next-shutdown-by')) {
                     patch.push({
                         op: 'remove',
-                        path: '/metadata/annotations/kube-esg~1shutdown-by'
+                        path: '/metadata/annotations/kube-esg~1next-shutdown-by'
                     });
                 }
 

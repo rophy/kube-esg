@@ -47,10 +47,10 @@ export async function POST(
     const patch = []
     
     // Handle shutdown-at annotation
-    if ('kube-esg/shutdown-at' in existingAnnotations) {
+    if ('kube-esg/next-shutdown-at' in existingAnnotations) {
       patch.push({
         op: 'replace',
-        path: '/metadata/annotations/kube-esg~1shutdown-at',
+        path: '/metadata/annotations/kube-esg~1next-shutdown-at',
         value: newShutdownDate
       })
     } else {
@@ -64,22 +64,22 @@ export async function POST(
       }
       patch.push({
         op: 'add',
-        path: '/metadata/annotations/kube-esg~1shutdown-at',
+        path: '/metadata/annotations/kube-esg~1next-shutdown-at',
         value: newShutdownDate
       })
     }
 
     // Handle shutdown-by annotation
-    if ('kube-esg/shutdown-by' in existingAnnotations) {
+    if ('kube-esg/next-shutdown-by' in existingAnnotations) {
       patch.push({
         op: 'replace',
-        path: '/metadata/annotations/kube-esg~1shutdown-by',
+        path: '/metadata/annotations/kube-esg~1next-shutdown-by',
         value: session.user.email
       })
     } else {
       patch.push({
         op: 'add',
-        path: '/metadata/annotations/kube-esg~1shutdown-by',
+        path: '/metadata/annotations/kube-esg~1next-shutdown-by',
         value: session.user.email
       })
     }
@@ -94,9 +94,9 @@ export async function POST(
       action: 'namespace_extend_completed',
       namespace: namespaceName,
       user: session.user.email,
-      previousShutdownAt: existingAnnotations['kube-esg/shutdown-at'] || 'not set',
+      previousShutdownAt: existingAnnotations['kube-esg/next-shutdown-at'] || 'not set',
       newShutdownAt: newShutdownDate,
-      previousShutdownBy: existingAnnotations['kube-esg/shutdown-by'] || 'not set'
+      previousShutdownBy: existingAnnotations['kube-esg/next-shutdown-by'] || 'not set'
     }, 'Namespace extension completed successfully')
 
     return NextResponse.json({

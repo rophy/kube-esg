@@ -7,6 +7,7 @@ interface Namespace {
   name: string
   shutdownBy: string
   shutdownAt: string
+  shutdownDone: string
   annotations: Record<string, string>
   labelValue: string | null
 }
