@@ -66,20 +66,21 @@ async function shutdownDeployments(namespaceName) {
             const name = deployment.metadata?.name;
             if (!name) continue;
 
-            // Skip if already shutdown
-            if (deployment.metadata?.annotations?.['kube-esg/prev-shutdown-at']) {
-                console.log(`    Deployment ${name} already shutdown`);
+            const currentReplicas = deployment.spec?.replicas || 0;
+            
+            // Skip if already shutdown (replicas == 0)
+            if (currentReplicas === 0) {
+                console.log(`    Deployment ${name} already shutdown (replicas: 0)`);
                 continue;
             }
 
-            const originalReplicas = deployment.spec?.replicas || 0;
-            console.log(`    Shutting down deployment ${name} (replicas: ${originalReplicas} -> 0)`);
+            console.log(`    Shutting down deployment ${name} (replicas: ${currentReplicas} -> 0)`);
 
             const patch = [
                 {
                     op: 'add',
                     path: '/metadata/annotations/kube-esg~1original-replicas',
-                    value: originalReplicas.toString()
+                    value: currentReplicas.toString()
                 },
                 {
                     op: 'add',
@@ -135,20 +136,21 @@ async function shutdownStatefulSets(namespaceName) {
             const name = statefulSet.metadata?.name;
             if (!name) continue;
 
-            // Skip if already shutdown
-            if (statefulSet.metadata?.annotations?.['kube-esg/prev-shutdown-at']) {
-                console.log(`    StatefulSet ${name} already shutdown`);
+            const currentReplicas = statefulSet.spec?.replicas || 0;
+            
+            // Skip if already shutdown (replicas == 0)
+            if (currentReplicas === 0) {
+                console.log(`    StatefulSet ${name} already shutdown (replicas: 0)`);
                 continue;
             }
 
-            const originalReplicas = statefulSet.spec?.replicas || 0;
-            console.log(`    Shutting down statefulset ${name} (replicas: ${originalReplicas} -> 0)`);
+            console.log(`    Shutting down statefulset ${name} (replicas: ${currentReplicas} -> 0)`);
 
             const patch = [
                 {
                     op: 'add',
                     path: '/metadata/annotations/kube-esg~1original-replicas',
-                    value: originalReplicas.toString()
+                    value: currentReplicas.toString()
                 },
                 {
                     op: 'add',
@@ -203,20 +205,21 @@ async function shutdownDaemonSets(namespaceName) {
             const name = daemonSet.metadata?.name;
             if (!name) continue;
 
-            // Skip if already shutdown
-            if (daemonSet.metadata?.annotations?.['kube-esg/prev-shutdown-at']) {
-                console.log(`    DaemonSet ${name} already shutdown`);
+            const currentNodeSelector = daemonSet.spec?.template?.spec?.nodeSelector || {};
+            
+            // Skip if already shutdown (has the magic selector)
+            if (currentNodeSelector['kube-esg/shutdown'] === 'never-match') {
+                console.log(`    DaemonSet ${name} already shutdown (has magic selector)`);
                 continue;
             }
 
-            const originalNodeSelector = daemonSet.spec?.template?.spec?.nodeSelector || {};
             console.log(`    Shutting down daemonset ${name} (using impossible node selector)`);
 
             const patch = [
                 {
                     op: 'add',
                     path: '/metadata/annotations/kube-esg~1original-node-selector',
-                    value: JSON.stringify(originalNodeSelector)
+                    value: JSON.stringify(currentNodeSelector)
                 },
                 {
                     op: 'add',
@@ -227,7 +230,7 @@ async function shutdownDaemonSets(namespaceName) {
                     op: 'replace',
                     path: '/spec/template/spec/nodeSelector',
                     value: {
-                        ...originalNodeSelector,
+                        ...currentNodeSelector,
                         'kube-esg/shutdown': 'never-match'
                     }
                 }
@@ -274,20 +277,21 @@ async function shutdownCronJobs(namespaceName) {
             const name = cronJob.metadata?.name;
             if (!name) continue;
 
-            // Skip if already shutdown
-            if (cronJob.metadata?.annotations?.['kube-esg/prev-shutdown-at']) {
-                console.log(`    CronJob ${name} already shutdown`);
+            const currentSuspend = cronJob.spec?.suspend || false;
+            
+            // Skip if already suspended
+            if (currentSuspend === true) {
+                console.log(`    CronJob ${name} already shutdown (suspended: true)`);
                 continue;
             }
 
-            const originalSuspend = cronJob.spec?.suspend || false;
-            console.log(`    Shutting down cronjob ${name} (suspend: ${originalSuspend} -> true)`);
+            console.log(`    Shutting down cronjob ${name} (suspend: ${currentSuspend} -> true)`);
 
             const patch = [
                 {
                     op: 'add',
                     path: '/metadata/annotations/kube-esg~1original-suspend',
-                    value: originalSuspend.toString()
+                    value: currentSuspend.toString()
                 },
                 {
                     op: 'add',
@@ -371,13 +375,6 @@ async function processNamespaces() {
         const annotations = namespace.metadata.annotations || {};
         const shutdownAt = getAnnotation(annotations, 'kube-esg/next-shutdown-at');
         const shutdownBy = getAnnotation(annotations, 'kube-esg/next-shutdown-by');
-        const shutdownDone = getAnnotation(annotations, 'kube-esg/prev-shutdown-at');
-
-        // Skip if already shutdown
-        if (shutdownDone) {
-            console.log(`  Namespace already shutdown: ${namespaceName}`);
-            continue;
-        }
 
         // If shutdown-at annotation doesn't exist, set it to NOW+X days
         if (!shutdownAt) {

@@ -114,10 +114,13 @@ export default function NamespaceTable() {
               </th>
             )}
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Shutdown At
+              Next Shutdown At
             </th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Shutdown By
+              Scheduled By
+            </th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Prev Shutdown At
             </th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               Actions
@@ -150,6 +153,15 @@ export default function NamespaceTable() {
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                 {namespace.shutdownBy || '-'}
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                {namespace.shutdownDone ? (
+                  <span className="text-gray-600">
+                    {new Date(namespace.shutdownDone).toISOString().split('T')[0]}
+                  </span>
+                ) : (
+                  <span className="text-gray-400">-</span>
+                )}
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                 <button 
