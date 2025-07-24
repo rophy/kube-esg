@@ -86,6 +86,13 @@ The application is **fully functional** with:
 - Kubernetes API requires cluster access (HTTP/TLS configuration needed)
 - Action buttons are placeholder (Edit/Delete not implemented)
 
+## Git Commit Guidelines
+
+**IMPORTANT**: Never mention Claude, AI tools, or automated generation in git commit messages. All commit messages should be professional and focus solely on the technical changes being made.
+
+❌ **Avoid**: "Generated with Claude Code", "Co-Authored-By: Claude", or any AI tool mentions
+✅ **Use**: Clear, descriptive commit messages that explain what was changed and why
+
 ## Next Steps
 
 Potential enhancements:
