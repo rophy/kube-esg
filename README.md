@@ -73,7 +73,7 @@ A Next.js application for managing Kubernetes namespaces with ESG (Environmental
 
 ### Environment Variables
 
-The application uses these environment variables (configured in `deploy/app-config.yaml`):
+The application uses these environment variables (configured in `deploy/app.yaml`):
 
 - `OIDC_ISSUER`: OIDC provider issuer URL
 - `OIDC_AUTHORIZATION_ENDPOINT`: OAuth authorization endpoint
@@ -113,8 +113,7 @@ The application requires these Kubernetes permissions:
 │   ├── rbac.yaml                   # Service account & permissions
 │   ├── dex-config.yaml             # Dex OIDC configuration
 │   ├── dex.yaml                    # Dex deployment
-│   ├── app-config.yaml             # App configuration & secrets
-│   └── app.yaml                    # App deployment & service
+│   └── app.yaml                    # App deployment, service & configuration
 ├── shutdown-job/                   # Namespace lifecycle automation
 │   ├── shutdown-namespaces.sh      # Shutdown automation script
 │   ├── Dockerfile                  # Container build for job

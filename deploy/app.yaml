@@ -23,14 +23,39 @@ spec:
         ports:
         - containerPort: 3000
           name: http
-        envFrom:
-        - configMapRef:
-            name: app-config
-        - secretRef:
-            name: app-secrets
         env:
         - name: NODE_ENV
           value: "production"
+        - name: OIDC_ENABLED
+          value: "true"
+        - name: OIDC_CLIENT_ID
+          value: "example-app"
+        - name: OIDC_SCOPE
+          value: "openid profile email"
+        - name: OIDC_APP_URL
+          value: "http://localhost:3000"
+        - name: NEXTAUTH_URL
+          value: "http://localhost:3000"
+        - name: OIDC_ISSUER
+          value: "http://7f000001.nip.io:5556/dex"
+        - name: OIDC_AUTHORIZATION_ENDPOINT
+          value: "http://7f000001.nip.io:5556/dex/auth"
+        - name: OIDC_TOKEN_ENDPOINT
+          value: "http://dex.kube-esg.svc.cluster.local:5556/dex/token"
+        - name: OIDC_JWKS_URI
+          value: "http://dex.kube-esg.svc.cluster.local:5556/dex/keys"
+        - name: OIDC_USERINFO_ENDPOINT
+          value: "http://dex.kube-esg.svc.cluster.local:5556/dex/userinfo"
+        - name: OIDC_CLIENT_SECRET
+          value: "ZXhhbXBsZS1hcHAtc2VjcmV0"
+        - name: NEXTAUTH_SECRET
+          value: "your-secret-key-here"
+        # Optional: Uncomment to filter namespaces by label presence in UI
+        # - name: TARGET_LABEL_NAME
+        #   value: "managed-by"
+        # Optional: Uncomment to configure shutdown days (default: 7)
+        # - name: SHUTDOWN_DAYS
+        #   value: "7"
         resources:
           requests:
             memory: "256Mi"

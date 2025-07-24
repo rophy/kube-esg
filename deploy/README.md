@@ -8,8 +8,7 @@ This directory contains Kubernetes manifests for deploying the Kubernetes ESG Da
 - `rbac.yaml` - Service account and RBAC permissions for namespace access
 - `dex-config.yaml` - ConfigMap with Dex OIDC server configuration
 - `dex.yaml` - Dex OIDC server deployment and service
-- `app-config.yaml` - Application configuration and secrets
-- `app.yaml` - Main application deployment and service
+- `app.yaml` - Main application deployment, service, and configuration
 
 ## Deployment
 
@@ -42,6 +41,4 @@ The application service account has ClusterRole permissions to:
 
 ## Configuration
 
-Key configuration is stored in:
-- ConfigMap `app-config`: Non-sensitive environment variables
-- Secret `app-secrets`: OIDC client secret and NextAuth secret
+Environment variables are configured directly in the `app.yaml` deployment manifest.

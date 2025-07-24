@@ -16,7 +16,6 @@ manifests:
   - deploy/rbac.yaml
   - deploy/dex-config.yaml
   - deploy/dex.yaml
-  - deploy/app-config.yaml
   - deploy/app.yaml
 deploy:
   kubectl: {}
@@ -46,6 +45,5 @@ profiles:
     - deploy/rbac.yaml
     - deploy/dex-config.yaml
     - deploy/dex.yaml
-    - deploy/app-config.yaml
     - deploy/app.yaml
 
