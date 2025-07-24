@@ -1,0 +1,446 @@
+# Test namespaces for kube-esg development and testing
+# Apply with: kubectl apply -f test-namespaces.yaml
+# Remove with: kubectl delete -f test-namespaces.yaml
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: test-app-alpha
+  labels:
+    managed-by: kube-esg
+    environment: test
+    team: alpha
+  annotations:
+    kube-esg/next-shutdown-at: "2025-08-01"
+    kube-esg/next-shutdown-by: "admin@example.com"
+    description: "Test namespace for team alpha applications"
+---
+# Alpha Team Resources
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alpha-web-server
+  namespace: test-app-alpha
+  labels:
+    app: alpha-web-server
+    team: alpha
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: alpha-web-server
+  template:
+    metadata:
+      labels:
+        app: alpha-web-server
+        team: alpha
+    spec:
+      containers:
+      - name: http-echo
+        image: hashicorp/http-echo:latest
+        args:
+        - "-text=Hello from Alpha Team!"
+        - "-listen=:8080"
+        ports:
+        - containerPort: 8080
+        resources:
+          requests:
+            memory: "32Mi"
+            cpu: "50m"
+          limits:
+            memory: "64Mi"
+            cpu: "100m"
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: alpha-database
+  namespace: test-app-alpha
+  labels:
+    app: alpha-database
+    team: alpha
+spec:
+  serviceName: alpha-database
+  replicas: 1
+  selector:
+    matchLabels:
+      app: alpha-database
+  template:
+    metadata:
+      labels:
+        app: alpha-database
+        team: alpha
+    spec:
+      containers:
+      - name: http-echo
+        image: hashicorp/http-echo:latest
+        args:
+        - "-text=Alpha Database Service"
+        - "-listen=:8080"
+        ports:
+        - containerPort: 8080
+        resources:
+          requests:
+            memory: "32Mi"
+            cpu: "50m"
+          limits:
+            memory: "64Mi"
+            cpu: "100m"
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: alpha-node-agent
+  namespace: test-app-alpha
+  labels:
+    app: alpha-node-agent
+    team: alpha
+spec:
+  selector:
+    matchLabels:
+      app: alpha-node-agent
+  template:
+    metadata:
+      labels:
+        app: alpha-node-agent
+        team: alpha
+    spec:
+      containers:
+      - name: http-echo
+        image: hashicorp/http-echo:latest
+        args:
+        - "-text=Alpha Node Agent"
+        - "-listen=:8080"
+        ports:
+        - containerPort: 8080
+        resources:
+          requests:
+            memory: "32Mi"
+            cpu: "50m"
+          limits:
+            memory: "64Mi"
+            cpu: "100m"
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: alpha-backup-job
+  namespace: test-app-alpha
+  labels:
+    app: alpha-backup-job
+    team: alpha
+spec:
+  schedule: "0 2 * * *"  # Daily at 2 AM
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: backup
+            image: busybox:latest
+            command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Starting Alpha Team backup at $(date)"
+              echo "Hello from Alpha backup job!"
+              echo "Simulating backup process..."
+              sleep 10
+              echo "Alpha backup completed at $(date)"
+          restartPolicy: OnFailure
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: test-app-beta
+  labels:
+    managed-by: kube-esg
+    environment: test
+    team: beta
+  annotations:
+    kube-esg/prev-shutdown-at: "2025-07-20T10:30:00Z"
+    description: "Test namespace for team beta applications - previously shutdown"
+---
+# Beta Team Resources
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: beta-api-server
+  namespace: test-app-beta
+  labels:
+    app: beta-api-server
+    team: beta
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: beta-api-server
+  template:
+    metadata:
+      labels:
+        app: beta-api-server
+        team: beta
+    spec:
+      containers:
+      - name: http-echo
+        image: hashicorp/http-echo:latest
+        args:
+        - "-text=Hello from Beta Team API!"
+        - "-listen=:8080"
+        ports:
+        - containerPort: 8080
+        resources:
+          requests:
+            memory: "32Mi"
+            cpu: "50m"
+          limits:
+            memory: "64Mi"
+            cpu: "100m"
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: beta-storage
+  namespace: test-app-beta
+  labels:
+    app: beta-storage
+    team: beta
+spec:
+  serviceName: beta-storage
+  replicas: 2
+  selector:
+    matchLabels:
+      app: beta-storage
+  template:
+    metadata:
+      labels:
+        app: beta-storage
+        team: beta
+    spec:
+      containers:
+      - name: http-echo
+        image: hashicorp/http-echo:latest
+        args:
+        - "-text=Beta Storage Service"
+        - "-listen=:8080"
+        ports:
+        - containerPort: 8080
+        resources:
+          requests:
+            memory: "32Mi"
+            cpu: "50m"
+          limits:
+            memory: "64Mi"
+            cpu: "100m"
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: beta-monitoring
+  namespace: test-app-beta
+  labels:
+    app: beta-monitoring
+    team: beta
+spec:
+  selector:
+    matchLabels:
+      app: beta-monitoring
+  template:
+    metadata:
+      labels:
+        app: beta-monitoring
+        team: beta
+    spec:
+      containers:
+      - name: http-echo
+        image: hashicorp/http-echo:latest
+        args:
+        - "-text=Beta Monitoring Agent"
+        - "-listen=:8080"
+        ports:
+        - containerPort: 8080
+        resources:
+          requests:
+            memory: "32Mi"
+            cpu: "50m"
+          limits:
+            memory: "64Mi"
+            cpu: "100m"
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: beta-maintenance
+  namespace: test-app-beta
+  labels:
+    app: beta-maintenance
+    team: beta
+spec:
+  schedule: "30 3 * * 0"  # Weekly on Sunday at 3:30 AM
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: maintenance
+            image: busybox:latest
+            command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Starting Beta Team maintenance at $(date)"
+              echo "Hello World from Beta maintenance!"
+              echo "Running system cleanup..."
+              sleep 15
+              echo "Maintenance completed successfully at $(date)"
+          restartPolicy: OnFailure
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: test-app-gamma
+  labels:
+    managed-by: kube-esg
+    environment: test
+    team: gamma
+  annotations:
+    kube-esg/next-shutdown-at: "2025-07-30"
+    kube-esg/next-shutdown-by: "scheduler-job"
+    kube-esg/prev-shutdown-at: "2025-07-15T14:45:00Z"
+    description: "Test namespace for team gamma - has both scheduled and previous shutdown"
+---
+# Gamma Team Resources
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gamma-frontend
+  namespace: test-app-gamma
+  labels:
+    app: gamma-frontend
+    team: gamma
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gamma-frontend
+  template:
+    metadata:
+      labels:
+        app: gamma-frontend
+        team: gamma
+    spec:
+      containers:
+      - name: http-echo
+        image: hashicorp/http-echo:latest
+        args:
+        - "-text=Hello from Gamma Team Frontend!"
+        - "-listen=:8080"
+        ports:
+        - containerPort: 8080
+        resources:
+          requests:
+            memory: "32Mi"
+            cpu: "50m"
+          limits:
+            memory: "64Mi"
+            cpu: "100m"
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: gamma-cache
+  namespace: test-app-gamma
+  labels:
+    app: gamma-cache
+    team: gamma
+spec:
+  serviceName: gamma-cache
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gamma-cache
+  template:
+    metadata:
+      labels:
+        app: gamma-cache
+        team: gamma
+    spec:
+      containers:
+      - name: http-echo
+        image: hashicorp/http-echo:latest
+        args:
+        - "-text=Gamma Cache Service"
+        - "-listen=:8080"
+        ports:
+        - containerPort: 8080
+        resources:
+          requests:
+            memory: "32Mi"
+            cpu: "50m"
+          limits:
+            memory: "64Mi"
+            cpu: "100m"
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: gamma-log-collector
+  namespace: test-app-gamma
+  labels:
+    app: gamma-log-collector
+    team: gamma
+spec:
+  selector:
+    matchLabels:
+      app: gamma-log-collector
+  template:
+    metadata:
+      labels:
+        app: gamma-log-collector
+        team: gamma
+    spec:
+      containers:
+      - name: http-echo
+        image: hashicorp/http-echo:latest
+        args:
+        - "-text=Gamma Log Collector"
+        - "-listen=:8080"
+        ports:
+        - containerPort: 8080
+        resources:
+          requests:
+            memory: "32Mi"
+            cpu: "50m"
+          limits:
+            memory: "64Mi"
+            cpu: "100m"
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: gamma-report-generator
+  namespace: test-app-gamma
+  labels:
+    app: gamma-report-generator
+    team: gamma
+spec:
+  schedule: "0 1 1 * *"  # Monthly on 1st at 1 AM
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: reporter
+            image: busybox:latest
+            command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Starting Gamma Team monthly report at $(date)"
+              echo "Hello World from Gamma reporting system!"
+              echo "Generating monthly statistics..."
+              sleep 20
+              echo "Report generation completed at $(date)"
+              echo "Files processed: 1337"
+              echo "Status: SUCCESS"
+          restartPolicy: OnFailure
