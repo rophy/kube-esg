@@ -46,6 +46,7 @@ export async function GET() {
       name: ns.metadata?.name || '',
       shutdownBy: ns.metadata?.annotations?.['kube-esg/shutdown-by'] || '',
       shutdownAt: ns.metadata?.annotations?.['kube-esg/shutdown-at'] || '',
+      shutdownDone: ns.metadata?.annotations?.['kube-esg/shutdown-done'] || '',
       annotations: ns.metadata?.annotations || {},
       labelValue: targetLabelName ? (ns.metadata?.labels?.[targetLabelName] || '') : null
     }))

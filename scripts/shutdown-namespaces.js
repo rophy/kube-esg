@@ -28,6 +28,8 @@ if (targetLabelName) {
 const kc = new k8s.KubeConfig();
 kc.loadFromDefault();
 const k8sApi = kc.makeApiClient(k8s.CoreV1Api);
+const appsApi = kc.makeApiClient(k8s.AppsV1Api);
+const batchApi = kc.makeApiClient(k8s.BatchV1Api);
 
 // Function to check if date is earlier than now
 function isDatePast(targetDate) {
@@ -51,6 +53,298 @@ function hasRequiredLabel(namespace) {
     const labelValue = namespaceLabels[targetLabelName];
     
     return labelValue && labelValue.trim() !== '';
+}
+
+// Function to shutdown deployments
+async function shutdownDeployments(namespaceName) {
+    try {
+        const response = await appsApi.listNamespacedDeployment({ namespace: namespaceName });
+        const deployments = response.items || [];
+        let shutdownCount = 0;
+
+        for (const deployment of deployments) {
+            const name = deployment.metadata?.name;
+            if (!name) continue;
+
+            // Skip if already shutdown
+            if (deployment.metadata?.annotations?.['kube-esg/shutdown-done']) {
+                console.log(`    Deployment ${name} already shutdown`);
+                continue;
+            }
+
+            const originalReplicas = deployment.spec?.replicas || 0;
+            console.log(`    Shutting down deployment ${name} (replicas: ${originalReplicas} -> 0)`);
+
+            const patch = [
+                {
+                    op: 'add',
+                    path: '/metadata/annotations/kube-esg~1original-replicas',
+                    value: originalReplicas.toString()
+                },
+                {
+                    op: 'add',
+                    path: '/metadata/annotations/kube-esg~1shutdown-done',
+                    value: nowTimestamp
+                },
+                {
+                    op: 'replace',
+                    path: '/spec/replicas',
+                    value: 0
+                }
+            ];
+
+            // Handle case where annotations don't exist
+            if (!deployment.metadata?.annotations) {
+                patch.unshift({
+                    op: 'add',
+                    path: '/metadata/annotations',
+                    value: {}
+                });
+            }
+
+            await appsApi.patchNamespacedDeployment({
+                name,
+                namespace: namespaceName,
+                body: patch,
+                pretty: undefined,
+                dryRun: undefined,
+                fieldManager: undefined,
+                fieldValidation: undefined,
+                force: undefined
+            }, { headers: { 'Content-Type': 'application/json-patch+json' } });
+
+            shutdownCount++;
+        }
+
+        console.log(`    Shutdown ${shutdownCount} deployments`);
+        return shutdownCount;
+    } catch (error) {
+        console.error(`    Failed to shutdown deployments in ${namespaceName}:`, error.message);
+        return 0;
+    }
+}
+
+// Function to shutdown statefulsets
+async function shutdownStatefulSets(namespaceName) {
+    try {
+        const response = await appsApi.listNamespacedStatefulSet({ namespace: namespaceName });
+        const statefulSets = response.items || [];
+        let shutdownCount = 0;
+
+        for (const statefulSet of statefulSets) {
+            const name = statefulSet.metadata?.name;
+            if (!name) continue;
+
+            // Skip if already shutdown
+            if (statefulSet.metadata?.annotations?.['kube-esg/shutdown-done']) {
+                console.log(`    StatefulSet ${name} already shutdown`);
+                continue;
+            }
+
+            const originalReplicas = statefulSet.spec?.replicas || 0;
+            console.log(`    Shutting down statefulset ${name} (replicas: ${originalReplicas} -> 0)`);
+
+            const patch = [
+                {
+                    op: 'add',
+                    path: '/metadata/annotations/kube-esg~1original-replicas',
+                    value: originalReplicas.toString()
+                },
+                {
+                    op: 'add',
+                    path: '/metadata/annotations/kube-esg~1shutdown-done',
+                    value: nowTimestamp
+                },
+                {
+                    op: 'replace',
+                    path: '/spec/replicas',
+                    value: 0
+                }
+            ];
+
+            if (!statefulSet.metadata?.annotations) {
+                patch.unshift({
+                    op: 'add',
+                    path: '/metadata/annotations',
+                    value: {}
+                });
+            }
+
+            await appsApi.patchNamespacedStatefulSet({
+                name,
+                namespace: namespaceName,
+                body: patch,
+                pretty: undefined,
+                dryRun: undefined,
+                fieldManager: undefined,
+                fieldValidation: undefined,
+                force: undefined
+            }, { headers: { 'Content-Type': 'application/json-patch+json' } });
+
+            shutdownCount++;
+        }
+
+        console.log(`    Shutdown ${shutdownCount} statefulsets`);
+        return shutdownCount;
+    } catch (error) {
+        console.error(`    Failed to shutdown statefulsets in ${namespaceName}:`, error.message);
+        return 0;
+    }
+}
+
+// Function to shutdown daemonsets
+async function shutdownDaemonSets(namespaceName) {
+    try {
+        const response = await appsApi.listNamespacedDaemonSet({ namespace: namespaceName });
+        const daemonSets = response.items || [];
+        let shutdownCount = 0;
+
+        for (const daemonSet of daemonSets) {
+            const name = daemonSet.metadata?.name;
+            if (!name) continue;
+
+            // Skip if already shutdown
+            if (daemonSet.metadata?.annotations?.['kube-esg/shutdown-done']) {
+                console.log(`    DaemonSet ${name} already shutdown`);
+                continue;
+            }
+
+            const originalNodeSelector = daemonSet.spec?.template?.spec?.nodeSelector || {};
+            console.log(`    Shutting down daemonset ${name} (using impossible node selector)`);
+
+            const patch = [
+                {
+                    op: 'add',
+                    path: '/metadata/annotations/kube-esg~1original-node-selector',
+                    value: JSON.stringify(originalNodeSelector)
+                },
+                {
+                    op: 'add',
+                    path: '/metadata/annotations/kube-esg~1shutdown-done',
+                    value: nowTimestamp
+                },
+                {
+                    op: 'replace',
+                    path: '/spec/template/spec/nodeSelector',
+                    value: {
+                        ...originalNodeSelector,
+                        'kube-esg/shutdown': 'never-match'
+                    }
+                }
+            ];
+
+            if (!daemonSet.metadata?.annotations) {
+                patch.unshift({
+                    op: 'add',
+                    path: '/metadata/annotations',
+                    value: {}
+                });
+            }
+
+            await appsApi.patchNamespacedDaemonSet({
+                name,
+                namespace: namespaceName,
+                body: patch,
+                pretty: undefined,
+                dryRun: undefined,
+                fieldManager: undefined,
+                fieldValidation: undefined,
+                force: undefined
+            }, { headers: { 'Content-Type': 'application/json-patch+json' } });
+
+            shutdownCount++;
+        }
+
+        console.log(`    Shutdown ${shutdownCount} daemonsets`);
+        return shutdownCount;
+    } catch (error) {
+        console.error(`    Failed to shutdown daemonsets in ${namespaceName}:`, error.message);
+        return 0;
+    }
+}
+
+// Function to shutdown cronjobs
+async function shutdownCronJobs(namespaceName) {
+    try {
+        const response = await batchApi.listNamespacedCronJob({ namespace: namespaceName });
+        const cronJobs = response.items || [];
+        let shutdownCount = 0;
+
+        for (const cronJob of cronJobs) {
+            const name = cronJob.metadata?.name;
+            if (!name) continue;
+
+            // Skip if already shutdown
+            if (cronJob.metadata?.annotations?.['kube-esg/shutdown-done']) {
+                console.log(`    CronJob ${name} already shutdown`);
+                continue;
+            }
+
+            const originalSuspend = cronJob.spec?.suspend || false;
+            console.log(`    Shutting down cronjob ${name} (suspend: ${originalSuspend} -> true)`);
+
+            const patch = [
+                {
+                    op: 'add',
+                    path: '/metadata/annotations/kube-esg~1original-suspend',
+                    value: originalSuspend.toString()
+                },
+                {
+                    op: 'add',
+                    path: '/metadata/annotations/kube-esg~1shutdown-done',
+                    value: nowTimestamp
+                },
+                {
+                    op: 'replace',
+                    path: '/spec/suspend',
+                    value: true
+                }
+            ];
+
+            if (!cronJob.metadata?.annotations) {
+                patch.unshift({
+                    op: 'add',
+                    path: '/metadata/annotations',
+                    value: {}
+                });
+            }
+
+            await batchApi.patchNamespacedCronJob({
+                name,
+                namespace: namespaceName,
+                body: patch,
+                pretty: undefined,
+                dryRun: undefined,
+                fieldManager: undefined,
+                fieldValidation: undefined,
+                force: undefined
+            }, { headers: { 'Content-Type': 'application/json-patch+json' } });
+
+            shutdownCount++;
+        }
+
+        console.log(`    Shutdown ${shutdownCount} cronjobs`);
+        return shutdownCount;
+    } catch (error) {
+        console.error(`    Failed to shutdown cronjobs in ${namespaceName}:`, error.message);
+        return 0;
+    }
+}
+
+// Function to perform complete namespace shutdown
+async function performNamespaceShutdown(namespaceName) {
+    console.log(`  Performing actual workload shutdown for: ${namespaceName}`);
+    
+    // Shutdown workloads in order: CronJobs, DaemonSets, Deployments, StatefulSets
+    const cronJobCount = await shutdownCronJobs(namespaceName);
+    const daemonSetCount = await shutdownDaemonSets(namespaceName);
+    const deploymentCount = await shutdownDeployments(namespaceName);
+    const statefulSetCount = await shutdownStatefulSets(namespaceName);
+    
+    const totalShutdown = cronJobCount + daemonSetCount + deploymentCount + statefulSetCount;
+    console.log(`  Total workloads shutdown: ${totalShutdown} (${deploymentCount} deployments, ${statefulSetCount} statefulsets, ${daemonSetCount} daemonsets, ${cronJobCount} cronjobs)`);
+    
+    return totalShutdown;
 }
 
 async function processNamespaces() {
@@ -77,8 +371,15 @@ async function processNamespaces() {
         const annotations = namespace.metadata.annotations || {};
         const shutdownAt = getAnnotation(annotations, 'kube-esg/shutdown-at');
         const shutdownBy = getAnnotation(annotations, 'kube-esg/shutdown-by');
+        const shutdownDone = getAnnotation(annotations, 'kube-esg/shutdown-done');
 
-        // If shutdown-at annotation doesn't exist, set it to NOW+7d
+        // Skip if already shutdown
+        if (shutdownDone) {
+            console.log(`  Namespace already shutdown: ${namespaceName}`);
+            continue;
+        }
+
+        // If shutdown-at annotation doesn't exist, set it to NOW+X days
         if (!shutdownAt) {
             console.log(`  Setting shutdown-at annotation to: ${futureDateString}`);
             
@@ -124,43 +425,50 @@ async function processNamespaces() {
         if (isDatePast(shutdownAt)) {
             console.log(`  Shutdown date has passed. Initiating shutdown for: ${namespaceName}`);
 
-            const patch = [
-                {
-                    op: 'add',
-                    path: '/metadata/annotations/kube-esg~1shutdown-done',
-                    value: nowTimestamp
+            try {
+                // Perform actual workload shutdown
+                const shutdownCount = await performNamespaceShutdown(namespaceName);
+                
+                // Mark namespace as shutdown and clean up scheduling annotations
+                const patch = [
+                    {
+                        op: 'add',
+                        path: '/metadata/annotations/kube-esg~1shutdown-done',
+                        value: nowTimestamp
+                    }
+                ];
+
+                // Remove shutdown-at and shutdown-by annotations
+                if (getAnnotation(annotations, 'kube-esg/shutdown-at')) {
+                    patch.push({
+                        op: 'remove',
+                        path: '/metadata/annotations/kube-esg~1shutdown-at'
+                    });
                 }
-            ];
 
-            // Remove shutdown-at and shutdown-by annotations
-            if (getAnnotation(annotations, 'kube-esg/shutdown-at')) {
-                patch.push({
-                    op: 'remove',
-                    path: '/metadata/annotations/kube-esg~1shutdown-at'
-                });
+                if (getAnnotation(annotations, 'kube-esg/shutdown-by')) {
+                    patch.push({
+                        op: 'remove',
+                        path: '/metadata/annotations/kube-esg~1shutdown-by'
+                    });
+                }
+
+                await k8sApi.patchNamespace({
+                    name: namespaceName,
+                    body: patch,
+                    pretty: undefined,
+                    dryRun: undefined,
+                    fieldManager: undefined,
+                    fieldValidation: undefined,
+                    force: undefined
+                }, { headers: { 'Content-Type': 'application/json-patch+json' } });
+
+                console.log(`  Namespace shutdown completed for: ${namespaceName}`);
+                console.log(`  Set shutdown-done annotation and cleared scheduling annotations`);
+                
+            } catch (error) {
+                console.error(`  Failed to shutdown namespace ${namespaceName}:`, error.message);
             }
-
-            if (getAnnotation(annotations, 'kube-esg/shutdown-by')) {
-                patch.push({
-                    op: 'remove',
-                    path: '/metadata/annotations/kube-esg~1shutdown-by'
-                });
-            }
-
-            await k8sApi.patchNamespace({
-                name: namespaceName,
-                body: patch,
-                pretty: undefined,
-                dryRun: undefined,
-                fieldManager: undefined,
-                fieldValidation: undefined,
-                force: undefined
-            }, { headers: { 'Content-Type': 'application/json-patch+json' } });
-
-            console.log(`  Set shutdown-done annotation`);
-            console.log(`  Cleared shutdown-at annotation`);
-            console.log(`  Cleared shutdown-by annotation`);
-            console.log(`  Shutdown simulation completed for: ${namespaceName}`);
         } else {
             console.log(`  Shutdown date not reached yet for: ${namespaceName}`);
         }
@@ -170,4 +478,7 @@ async function processNamespaces() {
 }
 
 // Run the job
-processNamespaces();
+processNamespaces().catch(error => {
+    console.error('Shutdown job failed:', error);
+    process.exit(1);
+});

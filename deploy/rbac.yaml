@@ -1,27 +1,69 @@
+# Service Account for UI (namespace annotation management)
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: kube-esg-app
   namespace: kube-esg
 ---
+# Service Account for shutdown job (full workload management)
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: shutdown-job
+  namespace: kube-esg
+---
+# ClusterRole for UI - namespace read + annotation management
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: kube-esg-namespace-reader
+  name: kube-esg-app
 rules:
 - apiGroups: [""]
   resources: ["namespaces"]
   verbs: ["get", "list", "patch"]
 ---
+# ClusterRole for shutdown job - namespace management + workload shutdown
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: shutdown-job
+rules:
+# Namespace management
+- apiGroups: [""]
+  resources: ["namespaces"]
+  verbs: ["get", "list", "watch", "patch", "update"]
+# Workload shutdown/restore privileges
+- apiGroups: ["apps"]
+  resources: ["deployments", "statefulsets", "daemonsets"]
+  verbs: ["get", "list", "patch", "update"]
+- apiGroups: ["batch"]
+  resources: ["cronjobs"]
+  verbs: ["get", "list", "patch", "update"]
+---
+# ClusterRoleBinding for UI
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: kube-esg-namespace-reader
+  name: kube-esg-app
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: kube-esg-namespace-reader
+  name: kube-esg-app
 subjects:
 - kind: ServiceAccount
   name: kube-esg-app
+  namespace: kube-esg
+---
+# ClusterRoleBinding for shutdown job
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: shutdown-job
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: shutdown-job
+subjects:
+- kind: ServiceAccount
+  name: shutdown-job
   namespace: kube-esg
