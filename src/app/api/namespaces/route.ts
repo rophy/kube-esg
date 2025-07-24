@@ -10,7 +10,7 @@ function hasRequiredLabel(namespace: k8s.V1Namespace, targetLabelName: string | 
   const namespaceLabels = namespace.metadata?.labels || {};
   const labelValue = namespaceLabels[targetLabelName];
   
-  return labelValue && labelValue.trim() !== '';
+  return labelValue != null && String(labelValue).trim() !== '';
 }
 
 export async function GET() {
