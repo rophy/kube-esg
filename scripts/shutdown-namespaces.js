@@ -3,17 +3,21 @@
 import * as k8s from '@kubernetes/client-node';
 
 // Configuration
-const SERVICE_ACCOUNT_NAME = process.env.SERVICE_ACCOUNT_NAME || 'shutdown-job';
-const NOW = new Date();
-const NOW_DATE = NOW.toISOString().split('T')[0]; // YYYY-MM-DD
-const NOW_TIMESTAMP = NOW.toISOString(); // YYYY-MM-DDTHH:mm:ss.sssZ
+const serviceAccountName = process.env.SERVICE_ACCOUNT_NAME || 'shutdown-job';
+const ownNamespace = process.env.POD_NAMESPACE || process.env.NAMESPACE || null;
+const now = new Date();
+const nowDate = now.toISOString().split('T')[0]; // YYYY-MM-DD
+const nowTimestamp = now.toISOString(); // YYYY-MM-DDTHH:mm:ss.sssZ
 
 // Calculate 7 days from now
-const FUTURE_DATE = new Date(NOW.getTime() + 7 * 24 * 60 * 60 * 1000);
-const FUTURE_DATE_STRING = FUTURE_DATE.toISOString().split('T')[0];
+const futureDate = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+const futureDateString = futureDate.toISOString().split('T')[0];
 
-console.log(`Starting namespace shutdown job at ${NOW_TIMESTAMP}`);
-console.log(`Service account: ${SERVICE_ACCOUNT_NAME}`);
+console.log(`Starting namespace shutdown job at ${nowTimestamp}`);
+console.log(`Service account: ${serviceAccountName}`);
+if (ownNamespace) {
+    console.log(`Own namespace: ${ownNamespace} (will be skipped)`);
+}
 
 // Initialize Kubernetes client
 const kc = new k8s.KubeConfig();
@@ -23,8 +27,8 @@ const k8sApi = kc.makeApiClient(k8s.CoreV1Api);
 // Function to check if date is earlier than now
 function isDatePast(targetDate) {
     const target = new Date(targetDate);
-    const now = new Date(NOW_DATE);
-    return target < now;
+    const today = new Date(nowDate);
+    return target < today;
 }
 
 // Function to get annotation value safely
@@ -41,8 +45,8 @@ async function processNamespaces() {
         const namespaceName = namespace.metadata.name;
         console.log(`Processing namespace: ${namespaceName}`);
 
-        // Skip system namespaces
-        if (namespaceName.match(/^kube-/) || namespaceName === 'default' || namespaceName === 'kube-esg') {
+        // Skip system namespaces and our own namespace
+        if (namespaceName.match(/^kube-/) || namespaceName === 'default' || namespaceName === ownNamespace) {
             console.log(`  Skipping system namespace: ${namespaceName}`);
             continue;
         }
@@ -53,18 +57,18 @@ async function processNamespaces() {
 
         // If shutdown-at annotation doesn't exist, set it to NOW+7d
         if (!shutdownAt) {
-            console.log(`  Setting shutdown-at annotation to: ${FUTURE_DATE_STRING}`);
+            console.log(`  Setting shutdown-at annotation to: ${futureDateString}`);
             
             const patch = [
                 {
                     op: 'add',
                     path: '/metadata/annotations/kube-esg~1shutdown-at',
-                    value: FUTURE_DATE_STRING
+                    value: futureDateString
                 },
                 {
                     op: 'add',
                     path: '/metadata/annotations/kube-esg~1shutdown-by',
-                    value: `serviceaccount/${SERVICE_ACCOUNT_NAME}`
+                    value: `serviceaccount/${serviceAccountName}`
                 }
             ];
 
@@ -101,7 +105,7 @@ async function processNamespaces() {
                 {
                     op: 'add',
                     path: '/metadata/annotations/kube-esg~1shutdown-done',
-                    value: NOW_TIMESTAMP
+                    value: nowTimestamp
                 }
             ];
 

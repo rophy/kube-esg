@@ -147,7 +147,7 @@ The project includes a CronJob that automatically manages namespace lifecycles:
 - **Daily execution**: Runs at 2 AM to process namespace shutdowns
 - **Default dates**: Sets 7-day shutdown dates for namespaces without annotations
 - **Shutdown simulation**: Marks namespaces past their shutdown date as completed
-- **System protection**: Skips system namespaces (kube-*, default, kube-esg)
+- **System protection**: Skips system namespaces (kube-*, default) and its own deployment namespace
 
 ### Job Behavior
 1. Scans all namespaces (excluding system namespaces)
