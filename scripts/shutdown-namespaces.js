@@ -5,6 +5,7 @@ import * as k8s from '@kubernetes/client-node';
 // Configuration
 const serviceAccountName = process.env.SERVICE_ACCOUNT_NAME || 'shutdown-job';
 const ownNamespace = process.env.POD_NAMESPACE || process.env.NAMESPACE || null;
+const targetLabelName = process.env.TARGET_LABEL_NAME || null; // Name of label to filter by
 const now = new Date();
 const nowDate = now.toISOString().split('T')[0]; // YYYY-MM-DD
 const nowTimestamp = now.toISOString(); // YYYY-MM-DDTHH:mm:ss.sssZ
@@ -17,6 +18,9 @@ console.log(`Starting namespace shutdown job at ${nowTimestamp}`);
 console.log(`Service account: ${serviceAccountName}`);
 if (ownNamespace) {
     console.log(`Own namespace: ${ownNamespace} (will be skipped)`);
+}
+if (targetLabelName) {
+    console.log(`Label filter: ${targetLabelName} (only namespaces with this label will be processed)`);
 }
 
 // Initialize Kubernetes client
@@ -36,6 +40,18 @@ function getAnnotation(annotations, key) {
     return annotations && annotations[key] ? annotations[key] : '';
 }
 
+// Function to check if namespace has required label
+function hasRequiredLabel(namespace) {
+    if (!targetLabelName) {
+        return true; // No filter, include all namespaces
+    }
+    
+    const namespaceLabels = namespace.metadata?.labels || {};
+    const labelValue = namespaceLabels[targetLabelName];
+    
+    return labelValue && labelValue.trim() !== '';
+}
+
 async function processNamespaces() {
     // Get all namespaces
     const namespacesResponse = await k8sApi.listNamespace();
@@ -48,6 +64,12 @@ async function processNamespaces() {
         // Skip system namespaces and our own namespace
         if (namespaceName.match(/^kube-/) || namespaceName === 'default' || namespaceName === ownNamespace) {
             console.log(`  Skipping system namespace: ${namespaceName}`);
+            continue;
+        }
+
+        // Check required label filter
+        if (!hasRequiredLabel(namespace)) {
+            console.log(`  Skipping namespace (missing required label '${targetLabelName}'): ${namespaceName}`);
             continue;
         }
 

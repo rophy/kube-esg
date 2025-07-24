@@ -148,13 +148,32 @@ The project includes a CronJob that automatically manages namespace lifecycles:
 - **Default dates**: Sets 7-day shutdown dates for namespaces without annotations
 - **Shutdown simulation**: Marks namespaces past their shutdown date as completed
 - **System protection**: Skips system namespaces (kube-*, default) and its own deployment namespace
+- **Label filtering**: Optional targeting of namespaces with specific labels
 
 ### Job Behavior
 1. Scans all namespaces (excluding system namespaces)
-2. Adds default `kube-esg/shutdown-at` annotation if missing (NOW+7 days)
-3. For namespaces past shutdown date:
+2. Filters by required label if `TARGET_LABEL_NAME` environment variable is set
+3. Adds default `kube-esg/shutdown-at` annotation if missing (NOW+7 days)
+4. For namespaces past shutdown date:
    - Adds `kube-esg/shutdown-done` timestamp
    - Removes `kube-esg/shutdown-at` and `kube-esg/shutdown-by` annotations
+
+### Label Filtering
+
+The shutdown job supports optional label-based filtering by label presence:
+
+```yaml
+env:
+- name: TARGET_LABEL_NAME
+  value: "managed-by"  # Only process namespaces that have a 'managed-by' label with any non-empty value
+```
+
+**Examples:**
+- `environment` - Only namespaces with an 'environment' label (value can be dev, prod, staging, etc.)
+- `team` - Only namespaces with a 'team' label (any team name)
+- `managed-by` - Only namespaces with a 'managed-by' label (any manager/tool name)
+
+When no `TARGET_LABEL_NAME` is set, all non-system namespaces are processed.
 
 See [`shutdown-job/README.md`](shutdown-job/README.md) for detailed configuration.
 

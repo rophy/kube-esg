@@ -14,6 +14,8 @@ data:
   OIDC_TOKEN_ENDPOINT: "http://dex.kube-esg.svc.cluster.local:5556/dex/token"
   OIDC_JWKS_URI: "http://dex.kube-esg.svc.cluster.local:5556/dex/keys"
   OIDC_USERINFO_ENDPOINT: "http://dex.kube-esg.svc.cluster.local:5556/dex/userinfo"
+  # Optional: Uncomment to filter namespaces by label presence in UI
+  # TARGET_LABEL_NAME: "managed-by"
 ---
 apiVersion: v1
 kind: Secret
