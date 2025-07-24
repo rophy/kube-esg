@@ -9,11 +9,11 @@ REGISTRY ?= local
 # Skaffold targets
 .PHONY: dev
 dev: ## Start development environment with hot reload
-	skaffold dev
+	skaffold dev --port-forward --tail
 
 .PHONY: run
 run: ## Deploy application to cluster
-	skaffold run
+	skaffold run --port-forward --tail
 
 .PHONY: deploy
 deploy: run ## Alias for run
@@ -27,15 +27,11 @@ clean: delete ## Alias for delete
 
 # Build targets
 .PHONY: build
-build: build-app build-shutdown-job ## Build all Docker images
+build: build-app ## Build Docker image
 
 .PHONY: build-app
-build-app: ## Build main application Docker image
+build-app: ## Build main application Docker image (includes shutdown job)
 	docker build -t $(APP_NAME):$(VERSION) .
-
-.PHONY: build-shutdown-job
-build-shutdown-job: ## Build shutdown job Docker image
-	docker build -t $(SHUTDOWN_JOB_NAME):$(VERSION) shutdown-job/
 
 # Development targets
 .PHONY: install
@@ -58,7 +54,6 @@ build-next: ## Build Next.js application
 .PHONY: kind-load
 kind-load: build ## Build and load images into kind cluster
 	kind load docker-image $(APP_NAME):$(VERSION)
-	kind load docker-image $(SHUTDOWN_JOB_NAME):$(VERSION)
 
 .PHONY: kind-deploy
 kind-deploy: kind-load run ## Build, load images to kind, and deploy
@@ -122,8 +117,8 @@ shell-app: ## Get shell in app pod
 	kubectl exec -it -n kube-esg deployment/kube-esg-app -- /bin/sh
 
 .PHONY: shell-shutdown-job
-shell-shutdown-job: ## Run shutdown job container with shell
-	docker run --rm -it --entrypoint=/bin/sh $(SHUTDOWN_JOB_NAME):$(VERSION)
+shell-shutdown-job: ## Run shutdown job in app container with shell
+	docker run --rm -it --entrypoint=/bin/sh $(APP_NAME):$(VERSION)
 
 # Help
 .PHONY: help
