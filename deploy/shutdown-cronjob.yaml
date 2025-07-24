@@ -41,6 +41,9 @@ spec:
             # Optional: Uncomment to filter namespaces by label presence
             # - name: TARGET_LABEL_NAME
             #   value: "managed-by"
+            # Optional: Uncomment to configure shutdown days (default: 7)
+            # - name: SHUTDOWN_DAYS
+            #   value: "7"
             resources:
               requests:
                 memory: "32Mi"

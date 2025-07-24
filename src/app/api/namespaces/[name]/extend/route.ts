@@ -33,8 +33,9 @@ export async function POST(
     kc.loadFromDefault()
     const k8sApi = kc.makeApiClient(k8s.CoreV1Api)
 
-    // Calculate new shutdown date (+7 days from now)
-    const newShutdownDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+    // Calculate new shutdown date (configurable days from now)
+    const shutdownDays = parseInt(process.env.SHUTDOWN_DAYS || '7', 10)
+    const newShutdownDate = new Date(Date.now() + shutdownDays * 24 * 60 * 60 * 1000)
       .toISOString()
       .split('T')[0]
 

@@ -44,16 +44,12 @@ create_test_namespace "test-unmanaged-2" "" ""
 echo ""
 echo "2. Enabling TARGET_LABEL_NAME in app configuration..."
 
-# Enable TARGET_LABEL_NAME in app-config.yaml
-if grep -q "# TARGET_LABEL_NAME:" deploy/app-config.yaml; then
-    # Uncomment the existing line
-    sed -i 's/^  # TARGET_LABEL_NAME:/  TARGET_LABEL_NAME:/' deploy/app-config.yaml
-    sed -i 's/^  # \([[:space:]]*\)"managed-by"/  \1"managed-by"/' deploy/app-config.yaml
-    echo "  Enabled TARGET_LABEL_NAME in deploy/app-config.yaml"
-else
-    # Add the line if it doesn't exist
-    sed -i '/OIDC_USERINFO_ENDPOINT:/a\  TARGET_LABEL_NAME: "managed-by"' deploy/app-config.yaml
-    echo "  Added TARGET_LABEL_NAME to deploy/app-config.yaml"
+# Enable TARGET_LABEL_NAME in app.yaml
+if grep -q "# - name: TARGET_LABEL_NAME" deploy/app.yaml; then
+    # Uncomment the existing lines
+    sed -i 's/^        # - name: TARGET_LABEL_NAME/        - name: TARGET_LABEL_NAME/' deploy/app.yaml
+    sed -i 's/^        #   value: "managed-by"/          value: "managed-by"/' deploy/app.yaml
+    echo "  Enabled TARGET_LABEL_NAME in deploy/app.yaml"
 fi
 
 # Enable TARGET_LABEL_NAME in shutdown-cronjob.yaml
@@ -62,6 +58,21 @@ if grep -q "# TARGET_LABEL_NAME:" deploy/shutdown-cronjob.yaml; then
     sed -i 's/^            # - name: TARGET_LABEL_NAME/            - name: TARGET_LABEL_NAME/' deploy/shutdown-cronjob.yaml
     sed -i 's/^            #   value: "managed-by"/              value: "managed-by"/' deploy/shutdown-cronjob.yaml
     echo "  Enabled TARGET_LABEL_NAME in deploy/shutdown-cronjob.yaml"
+fi
+
+# Enable SHUTDOWN_DAYS in app.yaml (optional - defaults to 7)
+if grep -q "# - name: SHUTDOWN_DAYS" deploy/app.yaml; then
+    # Uncomment to set custom shutdown days
+    sed -i 's/^        # - name: SHUTDOWN_DAYS/        - name: SHUTDOWN_DAYS/' deploy/app.yaml
+    sed -i 's/^        #   value: "7"/          value: "7"/' deploy/app.yaml
+    echo "  Enabled SHUTDOWN_DAYS in deploy/app.yaml (set to 7 days)"
+fi
+
+# Enable SHUTDOWN_DAYS in shutdown-cronjob.yaml (optional - defaults to 7)
+if grep -q "# SHUTDOWN_DAYS:" deploy/shutdown-cronjob.yaml; then
+    sed -i 's/^            # - name: SHUTDOWN_DAYS/            - name: SHUTDOWN_DAYS/' deploy/shutdown-cronjob.yaml
+    sed -i 's/^            #   value: "7"/              value: "7"/' deploy/shutdown-cronjob.yaml
+    echo "  Enabled SHUTDOWN_DAYS in deploy/shutdown-cronjob.yaml (set to 7 days)"
 fi
 
 echo ""
@@ -76,8 +87,9 @@ kubectl get namespaces test-unmanaged-1 test-unmanaged-2 --show-labels 2>/dev/nu
 
 echo ""
 echo "4. Configuration changes:"
-echo "  - deploy/app-config.yaml: TARGET_LABEL_NAME enabled"
+echo "  - deploy/app.yaml: TARGET_LABEL_NAME enabled"
 echo "  - deploy/shutdown-cronjob.yaml: TARGET_LABEL_NAME enabled"
+echo "  - SHUTDOWN_DAYS configuration available (defaults to 7 days)"
 
 echo ""
 echo "✅ Test environment setup complete!"

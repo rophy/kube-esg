@@ -6,12 +6,13 @@ import * as k8s from '@kubernetes/client-node';
 const serviceAccountName = process.env.SERVICE_ACCOUNT_NAME || 'shutdown-job';
 const ownNamespace = process.env.POD_NAMESPACE || process.env.NAMESPACE || null;
 const targetLabelName = process.env.TARGET_LABEL_NAME || null; // Name of label to filter by
+const shutdownDays = parseInt(process.env.SHUTDOWN_DAYS || '7', 10);
 const now = new Date();
 const nowDate = now.toISOString().split('T')[0]; // YYYY-MM-DD
 const nowTimestamp = now.toISOString(); // YYYY-MM-DDTHH:mm:ss.sssZ
 
-// Calculate 7 days from now
-const futureDate = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+// Calculate shutdown date from now + shutdownDays
+const futureDate = new Date(now.getTime() + shutdownDays * 24 * 60 * 60 * 1000);
 const futureDateString = futureDate.toISOString().split('T')[0];
 
 console.log(`Starting namespace shutdown job at ${nowTimestamp}`);
