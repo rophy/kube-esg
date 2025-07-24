@@ -17,6 +17,7 @@ manifests:
   - deploy/dex-config.yaml
   - deploy/dex.yaml
   - deploy/app.yaml
+  - deploy/shutdown-cronjob.yaml
 deploy:
   kubectl: {}
 portForward:
@@ -46,4 +47,5 @@ profiles:
     - deploy/dex-config.yaml
     - deploy/dex.yaml
     - deploy/app.yaml
+    - deploy/shutdown-cronjob.yaml
 

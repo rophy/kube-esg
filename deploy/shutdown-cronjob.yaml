@@ -38,12 +38,12 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
-            # Optional: Uncomment to filter namespaces by label presence
-            # - name: TARGET_LABEL_NAME
-            #   value: "managed-by"
-            # Optional: Uncomment to configure shutdown days (default: 7)
-            # - name: SHUTDOWN_DAYS
-            #   value: "7"
+            # Filter namespaces by label presence
+            - name: TARGET_LABEL_NAME
+              value: "team"
+            # Configure shutdown days
+            - name: SHUTDOWN_DAYS
+              value: "30"
             resources:
               requests:
                 memory: "32Mi"
