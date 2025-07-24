@@ -16,6 +16,7 @@ function hasRequiredLabel(namespace: k8s.V1Namespace, targetLabelName: string | 
 export async function GET() {
   try {
     const targetLabelName = process.env.TARGET_LABEL_NAME;
+    console.log('TARGET_LABEL_NAME from env:', targetLabelName);
     
     const kc = new k8s.KubeConfig()
     kc.loadFromDefault()
@@ -34,7 +35,9 @@ export async function GET() {
       }
       
       // Check required label filter
-      if (!hasRequiredLabel(ns, targetLabelName)) {
+      const hasLabel = hasRequiredLabel(ns, targetLabelName);
+      console.log(`Namespace ${namespaceName}: labels=${JSON.stringify(ns.metadata?.labels)}, hasRequiredLabel=${hasLabel}`);
+      if (!hasLabel) {
         return false;
       }
       
