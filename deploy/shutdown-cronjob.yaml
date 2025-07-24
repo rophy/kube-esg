@@ -28,8 +28,9 @@ spec:
           restartPolicy: Never
           containers:
           - name: shutdown
-            image: shutdown-job:latest
+            image: kube-esg-app:latest
             imagePullPolicy: IfNotPresent
+            command: ["npm", "run", "shutdown-job"]
             env:
             - name: SERVICE_ACCOUNT_NAME
               value: "shutdown-job"
@@ -42,15 +43,15 @@ spec:
                 cpu: "200m"
             securityContext:
               allowPrivilegeEscalation: false
-              readOnlyRootFilesystem: true
+              readOnlyRootFilesystem: false
               runAsNonRoot: true
-              runAsUser: 1000
+              runAsUser: 1001
               capabilities:
                 drop:
                 - ALL
           securityContext:
             runAsNonRoot: true
-            runAsUser: 1000
-            fsGroup: 1000
+            runAsUser: 1001
+            fsGroup: 1001
             seccompProfile:
               type: RuntimeDefault
