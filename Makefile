@@ -120,6 +120,15 @@ shell-app: ## Get shell in app pod
 shell-shutdown-job: ## Run shutdown job in app container with shell
 	docker run --rm -it --entrypoint=/bin/sh $(APP_NAME):$(VERSION)
 
+# Test environment
+.PHONY: setup-test-env
+setup-test-env: ## Set up test namespaces and enable label filtering
+	./scripts/setup-test-env.sh
+
+.PHONY: cleanup-test-env
+cleanup-test-env: ## Clean up test namespaces and disable label filtering
+	./scripts/cleanup-test-env.sh
+
 # Help
 .PHONY: help
 help: ## Show this help message
