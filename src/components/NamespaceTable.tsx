@@ -8,11 +8,14 @@ interface Namespace {
   shutdownBy: string
   shutdownAt: string
   annotations: Record<string, string>
+  labelValue: string | null
 }
 
 export default function NamespaceTable() {
   const { data: session } = useSession()
   const [namespaces, setNamespaces] = useState<Namespace[]>([])
+  const [targetLabelName, setTargetLabelName] = useState<string | null>(null)
+  const [shutdownDays, setShutdownDays] = useState<number>(7)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [extending, setExtending] = useState<string | null>(null)
@@ -29,11 +32,22 @@ export default function NamespaceTable() {
       }
       const data = await response.json()
       setNamespaces(data.namespaces)
+      setTargetLabelName(data.targetLabelName)
+      setShutdownDays(data.shutdownDays || 7)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred')
     } finally {
       setLoading(false)
     }
+  }
+
+  // Helper function to check if shutdown date is within 3 days
+  const isShutdownSoon = (shutdownAt: string) => {
+    if (!shutdownAt) return false
+    const shutdownDate = new Date(shutdownAt)
+    const now = new Date()
+    const threeDaysFromNow = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000)
+    return shutdownDate <= threeDaysFromNow
   }
 
   const handleExtend = async (namespaceName: string) => {
@@ -93,6 +107,11 @@ export default function NamespaceTable() {
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               Namespace Name
             </th>
+            {targetLabelName && (
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                {targetLabelName}
+              </th>
+            )}
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               Shutdown At
             </th>
@@ -110,12 +129,21 @@ export default function NamespaceTable() {
               <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                 {namespace.name}
               </td>
+              {targetLabelName && (
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                    {namespace.labelValue || '-'}
+                  </span>
+                </td>
+              )}
               <td className="px-6 py-4 whitespace-nowrap text-sm">
                 {namespace.shutdownAt ? (
-                  <span className="text-gray-900">{namespace.shutdownAt}</span>
+                  <span className={`font-medium ${isShutdownSoon(namespace.shutdownAt) ? 'text-red-600' : 'text-gray-900'}`}>
+                    {namespace.shutdownAt}
+                  </span>
                 ) : (
                   <span className="text-gray-400 italic">
-                    {new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
+                    {new Date(Date.now() + shutdownDays * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
                   </span>
                 )}
               </td>

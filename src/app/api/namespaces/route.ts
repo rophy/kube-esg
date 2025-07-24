@@ -16,7 +16,7 @@ function hasRequiredLabel(namespace: k8s.V1Namespace, targetLabelName: string | 
 export async function GET() {
   try {
     const targetLabelName = process.env.TARGET_LABEL_NAME;
-    console.log('TARGET_LABEL_NAME from env:', targetLabelName);
+    const shutdownDays = parseInt(process.env.SHUTDOWN_DAYS || '7', 10);
     
     const kc = new k8s.KubeConfig()
     kc.loadFromDefault()
@@ -35,9 +35,7 @@ export async function GET() {
       }
       
       // Check required label filter
-      const hasLabel = hasRequiredLabel(ns, targetLabelName);
-      console.log(`Namespace ${namespaceName}: labels=${JSON.stringify(ns.metadata?.labels)}, hasRequiredLabel=${hasLabel}`);
-      if (!hasLabel) {
+      if (!hasRequiredLabel(ns, targetLabelName)) {
         return false;
       }
       
@@ -48,10 +46,15 @@ export async function GET() {
       name: ns.metadata?.name || '',
       shutdownBy: ns.metadata?.annotations?.['kube-esg/shutdown-by'] || '',
       shutdownAt: ns.metadata?.annotations?.['kube-esg/shutdown-at'] || '',
-      annotations: ns.metadata?.annotations || {}
+      annotations: ns.metadata?.annotations || {},
+      labelValue: targetLabelName ? (ns.metadata?.labels?.[targetLabelName] || '') : null
     }))
 
-    return NextResponse.json({ namespaces })
+    return NextResponse.json({ 
+      namespaces,
+      targetLabelName,
+      shutdownDays
+    })
   } catch (error) {
     console.error('Error fetching namespaces:', error)
     return NextResponse.json(
