@@ -5,6 +5,7 @@ A Next.js application for managing Kubernetes namespaces with ESG (Environmental
 ## Features
 
 - **Namespace Lifecycle Management**: View and extend namespace shutdown dates
+- **Automated Shutdown Job**: CronJob that manages namespace lifecycles based on ESG annotations
 - **ESG Annotations**: Track `kube-esg/shutdown-at` and `kube-esg/shutdown-by` annotations
 - **OIDC Authentication**: Secure login using Dex OIDC provider
 - **Tabular Interface**: Clean, responsive table with conditional formatting
@@ -15,6 +16,7 @@ A Next.js application for managing Kubernetes namespaces with ESG (Environmental
 - **Frontend**: Next.js 15 with TypeScript and Tailwind CSS
 - **Backend API**: Next.js API routes with Kubernetes client
 - **Authentication**: NextAuth.js with OIDC provider (Dex)
+- **Automation**: Shutdown job for namespace lifecycle management
 - **Deployment**: Kubernetes manifests with Skaffold orchestration
 
 ## Getting Started
@@ -113,6 +115,10 @@ The application requires these Kubernetes permissions:
 │   ├── dex.yaml                    # Dex deployment
 │   ├── app-config.yaml             # App configuration & secrets
 │   └── app.yaml                    # App deployment & service
+├── shutdown-job/                   # Namespace lifecycle automation
+│   ├── shutdown-namespaces.sh      # Shutdown automation script
+│   ├── Dockerfile                  # Container build for job
+│   └── README.md                   # Shutdown job documentation
 ├── skaffold.yaml                   # Skaffold configuration
 ├── Dockerfile                      # Container build
 └── README.md
@@ -124,12 +130,33 @@ The application manages these Kubernetes namespace annotations:
 
 - **`kube-esg/shutdown-at`**: Target shutdown date (YYYY-MM-DD format)
 - **`kube-esg/shutdown-by`**: User who last extended the namespace
+- **`kube-esg/shutdown-done`**: Timestamp when namespace was marked for shutdown
 
 ### Annotation Behavior
 
 - **Confirmed dates**: Displayed in dark text when annotation exists
 - **Estimated dates**: Displayed in grey italic when annotation missing (shows +7 days from current date)
 - **Extend functionality**: Updates both annotations when "Extend" button is clicked
+- **Automated shutdown**: Daily CronJob processes namespaces past their shutdown date
+
+## Automated Shutdown Job
+
+The project includes a CronJob that automatically manages namespace lifecycles:
+
+### Features
+- **Daily execution**: Runs at 2 AM to process namespace shutdowns
+- **Default dates**: Sets 7-day shutdown dates for namespaces without annotations
+- **Shutdown simulation**: Marks namespaces past their shutdown date as completed
+- **System protection**: Skips system namespaces (kube-*, default, kube-esg)
+
+### Job Behavior
+1. Scans all namespaces (excluding system namespaces)
+2. Adds default `kube-esg/shutdown-at` annotation if missing (NOW+7 days)
+3. For namespaces past shutdown date:
+   - Adds `kube-esg/shutdown-done` timestamp
+   - Removes `kube-esg/shutdown-at` and `kube-esg/shutdown-by` annotations
+
+See [`shutdown-job/README.md`](shutdown-job/README.md) for detailed configuration.
 
 ## Contributing
 
