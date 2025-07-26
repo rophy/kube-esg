@@ -26,6 +26,11 @@ portForward:
   namespace: kube-esg
   port: 3000
   localPort: 3000
+- resourceType: service
+  resourceName: dex
+  namespace: kube-esg
+  port: 5556
+  localPort: 5556
 profiles:
 - name: dev
   build:
