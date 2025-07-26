@@ -10,6 +10,9 @@ interface Namespace {
   shutdownDone: string
   annotations: Record<string, string>
   labelValue: string | null
+  subscribers: string[]
+  subscriberCount: number
+  maxSubscribers: number
 }
 
 export default function NamespaceTable() {
@@ -20,6 +23,7 @@ export default function NamespaceTable() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [extending, setExtending] = useState<string | null>(null)
+  const [subscribing, setSubscribing] = useState<string | null>(null)
 
   useEffect(() => {
     fetchNamespaces()
@@ -81,6 +85,47 @@ export default function NamespaceTable() {
       setError(err instanceof Error ? err.message : 'Failed to extend namespace')
     } finally {
       setExtending(null)
+    }
+  }
+
+  const handleSubscribe = async (namespaceName: string) => {
+    if (!session?.user?.email) {
+      setError('Must be logged in to subscribe to namespace')
+      return
+    }
+
+    const namespace = namespaces.find(ns => ns.name === namespaceName)
+    const isSubscribed = namespace?.subscribers.includes(session.user.email)
+
+    setSubscribing(namespaceName)
+    try {
+      const response = await fetch(`/api/namespaces/${namespaceName}/subscribe`, {
+        method: isSubscribed ? 'DELETE' : 'POST',
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to update subscription')
+      }
+
+      const data = await response.json()
+      
+      // Update the namespace in local state
+      setNamespaces(prev => prev.map(ns => 
+        ns.name === namespaceName 
+          ? { 
+              ...ns, 
+              subscribers: data.subscribers,
+              subscriberCount: data.count
+            }
+          : ns
+      ))
+      
+      setError(null)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update subscription')
+    } finally {
+      setSubscribing(null)
     }
   }
 
@@ -164,13 +209,28 @@ export default function NamespaceTable() {
                 )}
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                <button 
-                  onClick={() => handleExtend(namespace.name)}
-                  disabled={extending === namespace.name}
-                  className="text-blue-600 hover:text-blue-900 disabled:text-gray-400 disabled:cursor-not-allowed"
-                >
-                  {extending === namespace.name ? 'Extending...' : 'Extend'}
-                </button>
+                <div className="flex space-x-3">
+                  <button 
+                    onClick={() => handleExtend(namespace.name)}
+                    disabled={extending === namespace.name}
+                    className="text-blue-600 hover:text-blue-900 disabled:text-gray-400 disabled:cursor-not-allowed"
+                  >
+                    {extending === namespace.name ? 'Extending...' : 'Extend'}
+                  </button>
+                  <button 
+                    onClick={() => handleSubscribe(namespace.name)}
+                    disabled={subscribing === namespace.name || (namespace.subscriberCount >= namespace.maxSubscribers && !namespace.subscribers.includes(session?.user?.email || ''))}
+                    className="text-green-600 hover:text-green-900 disabled:text-gray-400 disabled:cursor-not-allowed"
+                    title={namespace.subscribers.includes(session?.user?.email || '') ? 'Unsubscribe from shutdown notifications' : 'Subscribe to shutdown notifications'}
+                  >
+                    {subscribing === namespace.name 
+                      ? 'Loading...' 
+                      : namespace.subscribers.includes(session?.user?.email || '') 
+                        ? 'Unsubscribe' 
+                        : `Subscribe (${namespace.subscriberCount}/${namespace.maxSubscribers})`
+                    }
+                  </button>
+                </div>
               </td>
             </tr>
           ))}
