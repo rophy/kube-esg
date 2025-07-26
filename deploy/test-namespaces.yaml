@@ -35,6 +35,7 @@ spec:
         app: alpha-web-server
         team: alpha
     spec:
+      nodeSelector: {}
       containers:
       - name: http-echo
         image: hashicorp/http-echo:latest
@@ -71,6 +72,7 @@ spec:
         app: alpha-database
         team: alpha
     spec:
+      nodeSelector: {}
       containers:
       - name: http-echo
         image: hashicorp/http-echo:latest
@@ -105,6 +107,7 @@ spec:
         app: alpha-node-agent
         team: alpha
     spec:
+      nodeSelector: {}
       containers:
       - name: http-echo
         image: hashicorp/http-echo:latest
@@ -181,6 +184,7 @@ spec:
         app: beta-api-server
         team: beta
     spec:
+      nodeSelector: {}
       containers:
       - name: http-echo
         image: hashicorp/http-echo:latest
@@ -217,6 +221,7 @@ spec:
         app: beta-storage
         team: beta
     spec:
+      nodeSelector: {}
       containers:
       - name: http-echo
         image: hashicorp/http-echo:latest
@@ -251,6 +256,7 @@ spec:
         app: beta-monitoring
         team: beta
     spec:
+      nodeSelector: {}
       containers:
       - name: http-echo
         image: hashicorp/http-echo:latest
@@ -329,6 +335,7 @@ spec:
         app: gamma-frontend
         team: gamma
     spec:
+      nodeSelector: {}
       containers:
       - name: http-echo
         image: hashicorp/http-echo:latest
@@ -365,6 +372,7 @@ spec:
         app: gamma-cache
         team: gamma
     spec:
+      nodeSelector: {}
       containers:
       - name: http-echo
         image: hashicorp/http-echo:latest
@@ -399,6 +407,7 @@ spec:
         app: gamma-log-collector
         team: gamma
     spec:
+      nodeSelector: {}
       containers:
       - name: http-echo
         image: hashicorp/http-echo:latest

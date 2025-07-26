@@ -194,77 +194,6 @@ async function shutdownStatefulSets(namespaceName) {
     }
 }
 
-// Function to shutdown daemonsets
-async function shutdownDaemonSets(namespaceName) {
-    try {
-        const response = await appsApi.listNamespacedDaemonSet({ namespace: namespaceName });
-        const daemonSets = response.items || [];
-        let shutdownCount = 0;
-
-        for (const daemonSet of daemonSets) {
-            const name = daemonSet.metadata?.name;
-            if (!name) continue;
-
-            const currentNodeSelector = daemonSet.spec?.template?.spec?.nodeSelector || {};
-            
-            // Skip if already shutdown (has the magic selector)
-            if (currentNodeSelector['kube-esg/shutdown'] === 'never-match') {
-                console.log(`    DaemonSet ${name} already shutdown (has magic selector)`);
-                continue;
-            }
-
-            console.log(`    Shutting down daemonset ${name} (using impossible node selector)`);
-
-            const patch = [
-                {
-                    op: 'add',
-                    path: '/metadata/annotations/kube-esg~1original-node-selector',
-                    value: JSON.stringify(currentNodeSelector)
-                },
-                {
-                    op: 'add',
-                    path: '/metadata/annotations/kube-esg~1prev-shutdown-at',
-                    value: nowTimestamp
-                },
-                {
-                    op: 'replace',
-                    path: '/spec/template/spec/nodeSelector',
-                    value: {
-                        ...currentNodeSelector,
-                        'kube-esg/shutdown': 'never-match'
-                    }
-                }
-            ];
-
-            if (!daemonSet.metadata?.annotations) {
-                patch.unshift({
-                    op: 'add',
-                    path: '/metadata/annotations',
-                    value: {}
-                });
-            }
-
-            await appsApi.patchNamespacedDaemonSet({
-                name,
-                namespace: namespaceName,
-                body: patch,
-                pretty: undefined,
-                dryRun: undefined,
-                fieldManager: undefined,
-                fieldValidation: undefined,
-                force: undefined
-            }, { headers: { 'Content-Type': 'application/json-patch+json' } });
-
-            shutdownCount++;
-        }
-
-        console.log(`    Shutdown ${shutdownCount} daemonsets`);
-        return shutdownCount;
-    } catch (error) {
-        console.error(`    Failed to shutdown daemonsets in ${namespaceName}:`, error.message);
-        return 0;
-    }
-}
 
 // Function to shutdown cronjobs
 async function shutdownCronJobs(namespaceName) {
@@ -339,14 +268,13 @@ async function shutdownCronJobs(namespaceName) {
 async function performNamespaceShutdown(namespaceName) {
     console.log(`  Performing actual workload shutdown for: ${namespaceName}`);
     
-    // Shutdown workloads in order: CronJobs, DaemonSets, Deployments, StatefulSets
+    // Shutdown workloads in order: CronJobs, Deployments, StatefulSets (skip DaemonSets)
     const cronJobCount = await shutdownCronJobs(namespaceName);
-    const daemonSetCount = await shutdownDaemonSets(namespaceName);
     const deploymentCount = await shutdownDeployments(namespaceName);
     const statefulSetCount = await shutdownStatefulSets(namespaceName);
     
-    const totalShutdown = cronJobCount + daemonSetCount + deploymentCount + statefulSetCount;
-    console.log(`  Total workloads shutdown: ${totalShutdown} (${deploymentCount} deployments, ${statefulSetCount} statefulsets, ${daemonSetCount} daemonsets, ${cronJobCount} cronjobs)`);
+    const totalShutdown = cronJobCount + deploymentCount + statefulSetCount;
+    console.log(`  Total workloads shutdown: ${totalShutdown} (${deploymentCount} deployments, ${statefulSetCount} statefulsets, ${cronJobCount} cronjobs)`);
     
     return totalShutdown;
 }
