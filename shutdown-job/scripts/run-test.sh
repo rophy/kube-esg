@@ -33,15 +33,27 @@ kubectl get deployments -n test-app-alpha -o jsonpath='{range .items[*]}{.metada
 kubectl get deployments -n test-app-beta -o jsonpath='{range .items[*]}{.metadata.name}{": "}{.spec.replicas}{"\n"}{end}' | sed 's/^/  test-app-beta: /'
 kubectl get deployments -n test-app-gamma -o jsonpath='{range .items[*]}{.metadata.name}{": "}{.spec.replicas}{"\n"}{end}' | sed 's/^/  test-app-gamma: /'
 
-echo -e "${YELLOW}Step 6: Run shutdown-job${NC}"
-kubectl delete job test-shutdown-job -n kube-esg --ignore-not-found
-kubectl create job --from=cronjob/shutdown-job test-shutdown-job -n kube-esg
+echo -e "${YELLOW}Step 6: Build and load shutdown-job image${NC}"
+echo "Building shutdown-job image with skaffold..."
+IMAGE_TAG=$(skaffold build --quiet --output='{{json .}}' | jq -r '.builds[] | select(.imageName=="kube-esg-shutdown-job") | .tag')
 
-echo "Waiting for job to complete..."
-kubectl wait --for=condition=complete job/test-shutdown-job -n kube-esg --timeout=120s
+echo "Built and loaded image: $IMAGE_TAG"
 
-echo -e "${YELLOW}Step 7: Show job logs${NC}"
-kubectl logs job/test-shutdown-job -n kube-esg
+echo -e "${YELLOW}Step 7: Run shutdown-job with live logs${NC}"
+kubectl delete pod test-shutdown-job -n kube-esg --ignore-not-found=true
+
+kubectl run test-shutdown-job \
+  --image="$IMAGE_TAG" \
+  --image-pull-policy=IfNotPresent \
+  --restart=Never \
+  --env="SERVICE_ACCOUNT_NAME=shutdown-job" \
+  --env="POD_NAMESPACE=kube-esg" \
+  --env="TARGET_LABEL_NAME=team" \
+  --env="SHUTDOWN_DAYS=30" \
+  --overrides='{"spec":{"serviceAccountName":"shutdown-job"}}' \
+  --attach \
+  -n kube-esg \
+  -- npm start
 
 echo -e "${YELLOW}Step 8: Verify results${NC}"
 
@@ -56,7 +68,7 @@ kubectl get deployments -n test-app-gamma -o jsonpath='{range .items[*]}{.metada
 echo -e "${YELLOW}Step 9: Validation${NC}"
 
 # Check test-app-alpha (should be shutdown)
-ALPHA_REPLICAS=$(kubectl get deployment nginx -n test-app-alpha -o jsonpath='{.spec.replicas}')
+ALPHA_REPLICAS=$(kubectl get deployment alpha-web-server -n test-app-alpha -o jsonpath='{.spec.replicas}')
 if [ "$ALPHA_REPLICAS" = "0" ]; then
     echo -e "${GREEN}✓ test-app-alpha correctly shutdown (replicas: 0)${NC}"
 else
@@ -64,7 +76,7 @@ else
 fi
 
 # Check test-app-beta (should NOT be shutdown)
-BETA_REPLICAS=$(kubectl get deployment nginx -n test-app-beta -o jsonpath='{.spec.replicas}')
+BETA_REPLICAS=$(kubectl get deployment beta-api-server -n test-app-beta -o jsonpath='{.spec.replicas}')
 if [ "$BETA_REPLICAS" != "0" ]; then
     echo -e "${GREEN}✓ test-app-beta correctly preserved (replicas: $BETA_REPLICAS)${NC}"
 else

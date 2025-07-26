@@ -8,6 +8,10 @@ build:
     context: .
     docker:
       dockerfile: Dockerfile
+  - image: kube-esg-shutdown-job
+    context: shutdown-job
+    docker:
+      dockerfile: Dockerfile
   local:
     push: false
 manifests:
@@ -45,6 +49,10 @@ profiles:
           dest: /app/src
         - src: "src/**/*.tsx"
           dest: /app/src
+    - image: kube-esg-shutdown-job
+      context: shutdown-job
+      docker:
+        dockerfile: Dockerfile
   manifests:
     rawYaml:
     - deploy/namespace.yaml
