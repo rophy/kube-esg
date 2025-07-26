@@ -1,0 +1,15 @@
+apiVersion: cli.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: test-namespace-restrictions
+policies:
+  - policy.yaml
+resources:
+  - resources/namespace-with-label.yaml
+results:
+  - policy: restrict-namespace-changes
+    rule: deny-non-annotation-changes
+    resources:
+      - test-namespace
+    kind: Namespace
+    result: fail

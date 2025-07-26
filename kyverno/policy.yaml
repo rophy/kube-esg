@@ -1,0 +1,26 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: restrict-namespace-changes
+  annotations:
+    description: "Deny namespace changes which add, remove or update anything other than annotations"
+spec:
+  validationFailureAction: Enforce
+  background: false
+  rules:
+  - name: deny-non-annotation-changes
+    match:
+      any:
+      - resources:
+          kinds:
+          - Namespace
+          operations:
+          - UPDATE
+    validate:
+      message: "Only annotations can be modified on namespaces"
+      deny:
+        conditions:
+          any:
+          - key: "{{ request.object | omit(@, 'metadata.annotations', 'metadata.resourceVersion', 'metadata.managedFields') }}"
+            operator: NotEquals
+            value: "{{ request.oldObject | omit(@, 'metadata.annotations', 'metadata.resourceVersion', 'metadata.managedFields') }}"
