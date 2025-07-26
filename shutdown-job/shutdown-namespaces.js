@@ -264,6 +264,38 @@ async function shutdownCronJobs(namespaceName) {
     }
 }
 
+// Function to check for remaining active pods after shutdown
+async function checkForActivePods(namespaceName) {
+    try {
+        const response = await k8sApi.listNamespacedPod({ namespace: namespaceName });
+        const pods = response.items || [];
+        
+        const activePods = pods.filter(pod => {
+            const phase = pod.status?.phase;
+            // Consider Running, Pending, and Unknown as "active"
+            return phase === 'Running' || phase === 'Pending' || phase === 'Unknown';
+        });
+        
+        if (activePods.length > 0) {
+            console.warn(`  ⚠️  WARNING: ${activePods.length} active pods remain after shutdown:`);
+            activePods.forEach(pod => {
+                const name = pod.metadata?.name;
+                const phase = pod.status?.phase;
+                const ownerKind = pod.metadata?.ownerReferences?.[0]?.kind || 'Unknown';
+                const ownerName = pod.metadata?.ownerReferences?.[0]?.name || 'Unknown';
+                console.warn(`    - ${name} (${phase}) owned by ${ownerKind}/${ownerName}`);
+            });
+            return activePods.length;
+        } else {
+            console.log(`  ✓ Namespace cleanly shutdown - no active pods remaining`);
+            return 0;
+        }
+    } catch (error) {
+        console.error(`  Failed to check for active pods in ${namespaceName}:`, error.message);
+        return -1; // Unknown state
+    }
+}
+
 // Function to perform complete namespace shutdown
 async function performNamespaceShutdown(namespaceName) {
     console.log(`  Performing actual workload shutdown for: ${namespaceName}`);
@@ -303,6 +335,7 @@ async function processNamespaces() {
         const annotations = namespace.metadata.annotations || {};
         const shutdownAt = getAnnotation(annotations, 'kube-esg/next-shutdown-at');
         const shutdownBy = getAnnotation(annotations, 'kube-esg/next-shutdown-by');
+        const prevShutdownAt = getAnnotation(annotations, 'kube-esg/prev-shutdown-at');
 
         // If shutdown-at annotation doesn't exist, set it to NOW+X days
         if (!shutdownAt) {
@@ -342,6 +375,12 @@ async function processNamespaces() {
             
             console.log(`  Annotations set for namespace: ${namespaceName}`);
             continue;
+        }
+
+        // Check for active pods in previously shutdown namespaces
+        if (prevShutdownAt) {
+            console.log(`  Namespace was previously shutdown at: ${prevShutdownAt}`);
+            await checkForActivePods(namespaceName);
         }
 
         console.log(`  Current shutdown-at: ${shutdownAt}`);
