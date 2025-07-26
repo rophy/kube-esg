@@ -71,6 +71,7 @@ npm run build
 - `src/app/api/namespaces/route.ts`: Kubernetes API integration
 - `src/app/api/auth/[...nextauth]/route.ts`: OIDC authentication
 - `src/components/NamespaceTable.tsx`: Main data table component
+- `shutdown-job/shutdown-namespaces.js`: Namespace lifecycle automation
 - `docker-compose.yaml`: Service orchestration
 - `Dockerfile`: Container build configuration
 

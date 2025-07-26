@@ -28,9 +28,9 @@ spec:
           restartPolicy: Never
           containers:
           - name: shutdown
-            image: kube-esg-app:latest
+            image: kube-esg-shutdown-job:latest
             imagePullPolicy: IfNotPresent
-            command: ["npm", "run", "shutdown-job"]
+            command: ["npm", "start"]
             env:
             - name: SERVICE_ACCOUNT_NAME
               value: "shutdown-job"

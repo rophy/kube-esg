@@ -115,9 +115,9 @@ The application requires these Kubernetes permissions:
 │   ├── dex.yaml                    # Dex deployment
 │   └── app.yaml                    # App deployment, service & configuration
 ├── shutdown-job/                   # Namespace lifecycle automation
-│   ├── shutdown-namespaces.sh      # Shutdown automation script
-│   ├── Dockerfile                  # Container build for job
-│   └── README.md                   # Shutdown job documentation
+│   ├── shutdown-namespaces.js      # Shutdown automation script
+│   ├── package.json                # Dependencies (@kubernetes/client-node)
+│   └── Dockerfile                  # Container image for shutdown job
 ├── skaffold.yaml                   # Skaffold configuration
 ├── Dockerfile                      # Container build
 └── README.md
@@ -174,7 +174,7 @@ env:
 
 When no `TARGET_LABEL_NAME` is set, all non-system namespaces are processed.
 
-See [`shutdown-job/README.md`](shutdown-job/README.md) for detailed configuration.
+See the shutdown-job directory for detailed configuration.
 
 ## Contributing
 
